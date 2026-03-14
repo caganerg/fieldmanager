@@ -2,25 +2,32 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { Trees, MapPin, Database, Settings, Trash2, Edit2, ChevronRight, ChevronDown, Save, X, Plus, Folder, FolderOpen, LayoutGrid, GripVertical, Palette, Download, Upload } from "lucide-react";
+import { Trees, MapPin, Database, Settings, Trash2, Edit2, ChevronRight, ChevronDown, Save, X, Plus, Folder, FolderOpen, LayoutGrid, GripVertical, Palette, Download, Upload, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { type FieldPolygon } from "@/components/Map";
 import type { LatLngTuple } from "leaflet";
 
 // Dynamically import Map with SSR disabled since Leaflet requires window/document
-const Map = dynamic(() => import("@/components/Map"), { 
+const Map = dynamic(() => import("@/components/Map"), {
   ssr: false,
   loading: () => <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 bg-slate-100 dark:bg-slate-900 absolute inset-0">Harita yükleniyor...</div>
 });
 
 export default function Dashboard() {
   const [isMounted, setIsMounted] = useState(false);
-  
+
   // App State
   const [fields, setFields] = useState<FieldPolygon[]>([]);
-  const [groups, setGroups] = useState<{id: string, name: string}[]>([]);
+  const [groups, setGroups] = useState<{ id: string, name: string }[]>([]);
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [pendingCoordinates, setPendingCoordinates] = useState<LatLngTuple[] | null>(null);
@@ -30,11 +37,12 @@ export default function Dashboard() {
   const [isAddingGroup, setIsAddingGroup] = useState(false);
 
   // Drag and Drop State
-  const [dragItem, setDragItem] = useState<{type: 'group' | 'field', id: string} | null>(null);
-  const [dragOverItem, setDragOverItem] = useState<{type: 'group' | 'field', id: string} | null>(null);
+  const [dragItem, setDragItem] = useState<{ type: 'group' | 'field', id: string } | null>(null);
+  const [dragOverItem, setDragOverItem] = useState<{ type: 'group' | 'field', id: string } | null>(null);
   const [dragOverGroup, setDragOverGroup] = useState<string | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [newGroupName, setNewGroupName] = useState("");
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -267,16 +275,16 @@ export default function Dashboard() {
       fields,
       groups
     };
-    
+
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    
+
     const a = document.createElement('a');
     a.href = url;
     a.download = `tarla-verileri-${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(a);
     a.click();
-    
+
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
@@ -290,7 +298,7 @@ export default function Dashboard() {
       try {
         const content = event.target?.result as string;
         const data = JSON.parse(content);
-        
+
         // Basic validation
         if (data && data.fields && Array.isArray(data.fields) && data.groups && Array.isArray(data.groups)) {
           // Parse dates back to Date objects
@@ -299,15 +307,15 @@ export default function Dashboard() {
             plantDate: f.plantDate ? new Date(f.plantDate) : undefined,
             harvestDate: f.harvestDate ? new Date(f.harvestDate) : undefined,
           }));
-          
+
           setFields(parsedFields);
           setGroups(data.groups);
-          
+
           // Clear file input so the same file can be selected again
           if (fileInputRef.current) {
             fileInputRef.current.value = '';
           }
-          
+
           alert('Veriler başarıyla içe aktarıldı.');
         } else {
           alert('Geçersiz dosya formatı. Lütfen doğru bir tarla verisi dosyası seçin.');
@@ -317,7 +325,7 @@ export default function Dashboard() {
         alert('Dosya okunurken bir hata oluştu veya format bozuk.');
       }
     };
-    
+
     reader.readAsText(file);
   };
 
@@ -330,12 +338,12 @@ export default function Dashboard() {
       <aside className="w-72 border-r bg-white dark:bg-slate-900 flex flex-col pt-6 shadow-sm z-20">
         <div className="flex items-center gap-2 mb-8 px-6 text-emerald-600 dark:text-emerald-400">
           <Trees className="w-8 h-8" />
-          <h1 className="text-xl font-bold tracking-tight">Tarla Takip</h1>
+          <h1 className="text-xl font-bold tracking-tight">Field Manager</h1>
         </div>
 
         <div className="px-6 mb-4">
-          <Button 
-            variant="default" 
+          <Button
+            variant="default"
             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
             onClick={() => {
               setIsDrawingMode(true);
@@ -354,7 +362,7 @@ export default function Dashboard() {
               <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
                 Tarlalar & Gruplar
               </h3>
-              <button 
+              <button
                 onClick={() => setIsAddingGroup(!isAddingGroup)}
                 className="text-slate-400 hover:text-emerald-500 transition-colors"
                 title="Yeni Grup Ekle"
@@ -362,18 +370,18 @@ export default function Dashboard() {
                 <Plus className="w-4 h-4" />
               </button>
             </div>
-            
+
             {isAddingGroup && (
               <div className="flex gap-2 mb-3">
-                 <Input 
-                   value={newGroupName}
-                   onChange={e => setNewGroupName(e.target.value)}
-                   placeholder="Grup Adı"
-                   className="h-8 text-sm"
-                   onKeyDown={e => e.key === 'Enter' && handleAddGroup()}
-                   autoFocus
-                 />
-                 <Button size="sm" onClick={handleAddGroup} className="h-8 bg-emerald-600 hover:bg-emerald-700">Ekle</Button>
+                <Input
+                  value={newGroupName}
+                  onChange={e => setNewGroupName(e.target.value)}
+                  placeholder="Grup Adı"
+                  className="h-8 text-sm"
+                  onKeyDown={e => e.key === 'Enter' && handleAddGroup()}
+                  autoFocus
+                />
+                <Button size="sm" onClick={handleAddGroup} className="h-8 bg-emerald-600 hover:bg-emerald-700">Ekle</Button>
               </div>
             )}
 
@@ -388,21 +396,18 @@ export default function Dashboard() {
                   const isExpanded = expandedGroups.has(group.id);
                   const groupFields = fields.filter(f => f.groupId === group.id);
                   return (
-                    <li 
+                    <li
                       key={group.id}
-                      className={`transition-all duration-150 ${
-                        dragOverItem?.type === 'group' && dragOverItem.id === group.id 
-                          ? 'drag-over-indicator' 
+                      className={`transition-all duration-150 ${dragOverItem?.type === 'group' && dragOverItem.id === group.id
+                        ? 'drag-over-indicator'
+                        : ''
+                        } ${dragOverGroup === group.id
+                          ? 'drag-over-group'
                           : ''
-                      } ${
-                        dragOverGroup === group.id 
-                          ? 'drag-over-group' 
+                        } ${dragItem?.type === 'group' && dragItem.id === group.id
+                          ? 'dragging'
                           : ''
-                      } ${
-                        dragItem?.type === 'group' && dragItem.id === group.id 
-                          ? 'dragging' 
-                          : ''
-                      }`}
+                        }`}
                       draggable
                       onDragStart={(e) => handleDragStart('group', group.id, e)}
                       onDragEnd={handleDragEnd}
@@ -419,11 +424,10 @@ export default function Dashboard() {
                             if (!isExpanded) toggleGroupExpand(group.id);
                           }}
                           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleGroupSelect(group.id); if (!isExpanded) toggleGroupExpand(group.id); } }}
-                          className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
-                            selectedGroupId === group.id && !selectedFieldId
-                              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 font-medium border border-emerald-200 dark:border-emerald-800" 
-                              : "hover:bg-slate-100 text-slate-700 dark:hover:bg-slate-800 dark:text-slate-300 border border-transparent"
-                          }`}
+                          className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${selectedGroupId === group.id && !selectedFieldId
+                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 font-medium border border-emerald-200 dark:border-emerald-800"
+                            : "hover:bg-slate-100 text-slate-700 dark:hover:bg-slate-800 dark:text-slate-300 border border-transparent"
+                            }`}
                         >
                           <div className="flex items-center gap-1.5 overflow-hidden">
                             <GripVertical className="w-3.5 h-3.5 shrink-0 text-slate-300 dark:text-slate-600 cursor-grab active:cursor-grabbing" />
@@ -434,12 +438,12 @@ export default function Dashboard() {
                               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); toggleGroupExpand(group.id); } }}
                               className="p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                             >
-                              {isExpanded 
+                              {isExpanded
                                 ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                                 : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                               }
                             </span>
-                            {isExpanded 
+                            {isExpanded
                               ? <FolderOpen className={`w-4 h-4 shrink-0 ${selectedGroupId === group.id && !selectedFieldId ? "text-emerald-500" : "text-amber-500"}`} />
                               : <Folder className={`w-4 h-4 shrink-0 ${selectedGroupId === group.id && !selectedFieldId ? "text-emerald-500" : "text-slate-400"}`} />
                             }
@@ -447,7 +451,7 @@ export default function Dashboard() {
                             <span className="text-xs text-slate-400 ml-1">({groupFields.length})</span>
                           </div>
                         </div>
-                        <button 
+                        <button
                           onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group.id); }}
                           className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 opacity-0 group-hover/item:opacity-100 text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-all"
                           title="Sil"
@@ -460,17 +464,15 @@ export default function Dashboard() {
                       {isExpanded && groupFields.length > 0 && (
                         <ul className="ml-5 pl-3 border-l-2 border-slate-200 dark:border-slate-700 space-y-0.5 mt-0.5 mb-1">
                           {groupFields.map(field => (
-                            <li 
+                            <li
                               key={field.id}
-                              className={`group/field relative transition-all duration-150 ${
-                                dragOverItem?.type === 'field' && dragOverItem.id === field.id 
-                                  ? 'drag-over-indicator' 
+                              className={`group/field relative transition-all duration-150 ${dragOverItem?.type === 'field' && dragOverItem.id === field.id
+                                ? 'drag-over-indicator'
+                                : ''
+                                } ${dragItem?.type === 'field' && dragItem.id === field.id
+                                  ? 'dragging'
                                   : ''
-                              } ${
-                                dragItem?.type === 'field' && dragItem.id === field.id 
-                                  ? 'dragging' 
-                                  : ''
-                              }`}
+                                }`}
                               draggable
                               onDragStart={(e) => { e.stopPropagation(); handleDragStart('field', field.id, e); }}
                               onDragEnd={handleDragEnd}
@@ -479,11 +481,10 @@ export default function Dashboard() {
                             >
                               <button
                                 onClick={() => handleFieldSelect(field.id)}
-                                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-sm transition-colors ${
-                                  selectedFieldId === field.id 
-                                    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 font-medium border border-emerald-200 dark:border-emerald-800" 
-                                    : "hover:bg-slate-100 text-slate-600 dark:hover:bg-slate-800 dark:text-slate-400 border border-transparent"
-                                }`}
+                                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-sm transition-colors ${selectedFieldId === field.id
+                                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 font-medium border border-emerald-200 dark:border-emerald-800"
+                                  : "hover:bg-slate-100 text-slate-600 dark:hover:bg-slate-800 dark:text-slate-400 border border-transparent"
+                                  }`}
                               >
                                 <div className="flex items-center gap-2 overflow-hidden">
                                   <GripVertical className="w-3 h-3 shrink-0 text-slate-300 dark:text-slate-600 cursor-grab active:cursor-grabbing" />
@@ -495,7 +496,7 @@ export default function Dashboard() {
                                   <span className="truncate text-[13px]">{field.name}</span>
                                 </div>
                               </button>
-                              <button 
+                              <button
                                 onClick={(e) => { e.stopPropagation(); handleDeleteField(field.id); }}
                                 className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 opacity-0 group-hover/field:opacity-100 text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-all"
                                 title="Sil"
@@ -517,17 +518,15 @@ export default function Dashboard() {
 
                 {/* --- Ungrouped fields at root level --- */}
                 {fields.filter(f => !f.groupId).map(field => (
-                  <li 
+                  <li
                     key={field.id}
-                    className={`group/field relative transition-all duration-150 ${
-                      dragOverItem?.type === 'field' && dragOverItem.id === field.id 
-                        ? 'drag-over-indicator' 
+                    className={`group/field relative transition-all duration-150 ${dragOverItem?.type === 'field' && dragOverItem.id === field.id
+                      ? 'drag-over-indicator'
+                      : ''
+                      } ${dragItem?.type === 'field' && dragItem.id === field.id
+                        ? 'dragging'
                         : ''
-                    } ${
-                      dragItem?.type === 'field' && dragItem.id === field.id 
-                        ? 'dragging' 
-                        : ''
-                    }`}
+                      }`}
                     draggable
                     onDragStart={(e) => handleDragStart('field', field.id, e)}
                     onDragEnd={handleDragEnd}
@@ -536,11 +535,10 @@ export default function Dashboard() {
                   >
                     <button
                       onClick={() => handleFieldSelect(field.id)}
-                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                        selectedFieldId === field.id 
-                          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 font-medium border border-emerald-200 dark:border-emerald-800" 
-                          : "hover:bg-slate-100 text-slate-700 dark:hover:bg-slate-800 dark:text-slate-300 border border-transparent"
-                      }`}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-colors ${selectedFieldId === field.id
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 font-medium border border-emerald-200 dark:border-emerald-800"
+                        : "hover:bg-slate-100 text-slate-700 dark:hover:bg-slate-800 dark:text-slate-300 border border-transparent"
+                        }`}
                     >
                       <div className="flex items-center gap-2 overflow-hidden">
                         <GripVertical className="w-3.5 h-3.5 shrink-0 text-slate-300 dark:text-slate-600 cursor-grab active:cursor-grabbing" />
@@ -553,7 +551,7 @@ export default function Dashboard() {
                       </div>
                       <ChevronRight className={`w-4 h-4 opacity-0 transition-opacity ${selectedFieldId === field.id ? "opacity-100" : "group-hover/field:opacity-50"}`} />
                     </button>
-                    <button 
+                    <button
                       onClick={(e) => { e.stopPropagation(); handleDeleteField(field.id); }}
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 opacity-0 group-hover/field:opacity-100 text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-all"
                       title="Sil"
@@ -566,14 +564,14 @@ export default function Dashboard() {
             )}
           </div>
         </nav>
-        
+
         <div className="mt-auto px-4 py-4 border-t flex flex-col gap-1">
-          <input 
-            type="file" 
-            accept=".json" 
-            ref={fileInputRef} 
-            onChange={handleImportData} 
-            className="hidden" 
+          <input
+            type="file"
+            accept=".json"
+            ref={fileInputRef}
+            onChange={handleImportData}
+            className="hidden"
           />
           <Button variant="ghost" className="justify-start gap-3 w-full text-slate-500" onClick={handleExportData}>
             <Download className="w-4 h-4" />
@@ -582,6 +580,10 @@ export default function Dashboard() {
           <Button variant="ghost" className="justify-start gap-3 w-full text-slate-500" onClick={() => fileInputRef.current?.click()}>
             <Upload className="w-4 h-4" />
             <span className="text-sm">İçe Aktar</span>
+          </Button>
+          <Button variant="ghost" className="justify-start gap-3 w-full text-slate-500" onClick={() => setIsAboutOpen(true)}>
+            <Info className="w-4 h-4" />
+            <span className="text-sm">Hakkında</span>
           </Button>
           <Button variant="ghost" className="justify-start gap-3 w-full text-slate-500">
             <Settings className="w-4 h-4" />
@@ -602,13 +604,13 @@ export default function Dashboard() {
             ) : "Harita Görünümü"}
           </h2>
         </header>
-        
+
         {/* Map Container */}
         <div className="flex-1 w-full h-full relative z-0 bg-slate-200 dark:bg-slate-800">
           {isMounted && (
-            <Map 
-              fields={selectedGroupId === null ? fields : fields.filter(f => f.groupId === selectedGroupId)} 
-              isDrawingMode={isDrawingMode} 
+            <Map
+              fields={selectedGroupId === null ? fields : fields.filter(f => f.groupId === selectedGroupId)}
+              isDrawingMode={isDrawingMode}
               onPolygonCreated={handlePolygonCreated}
               selectedFieldId={selectedFieldId}
               onFieldClick={(id) => handleFieldSelect(id)}
@@ -622,13 +624,13 @@ export default function Dashboard() {
         <aside className="w-80 border-l bg-white dark:bg-slate-900 flex flex-col shadow-xl z-20 animate-in slide-in-from-right duration-200">
           <div className="h-16 flex items-center justify-between px-6 border-b">
             <h2 className="font-semibold text-slate-800 dark:text-slate-100">
-              {selectedGroupId !== null && !selectedFieldId && !pendingCoordinates 
-                ? "Grup Detayı" 
-                : pendingCoordinates 
-                  ? "Yeni Tarla Detayı" 
+              {selectedGroupId !== null && !selectedFieldId && !pendingCoordinates
+                ? "Grup Detayı"
+                : pendingCoordinates
+                  ? "Yeni Tarla Detayı"
                   : "Tarla Düzenle"}
             </h2>
-            <button 
+            <button
               onClick={() => {
                 handleCancelForm();
                 setSelectedGroupId(null);
@@ -641,52 +643,52 @@ export default function Dashboard() {
 
           <div className="p-6 flex-1 overflow-y-auto space-y-6">
             {selectedGroupId !== null && !selectedFieldId && !pendingCoordinates ? (() => {
-               const group = groups.find(g => g.id === selectedGroupId);
-               const groupFields = fields.filter(f => f.groupId === selectedGroupId);
-               const uniqueCrops = Array.from(new Set(groupFields.map(f => f.cropType).filter(Boolean)));
-               
-               return (
-                 <>
-                   <div className="space-y-2">
-                      <Label htmlFor="groupName">Grup Adı</Label>
-                      <Input
-                        id="groupName"
-                        value={group?.name || ""}
-                        onChange={(e) => group && handleRenameGroup(group.id, e.target.value)}
-                        placeholder="Grup adı girin"
-                      />
-                   </div>
-                   <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-                     <div>
-                       <div className="text-sm text-slate-500 mb-1">Toplam Tarla</div>
-                       <div className="font-medium">{groupFields.length} adet</div>
-                     </div>
-                     <div>
-                       <div className="text-sm text-slate-500 mb-1">Ekilen Ürünler</div>
-                       {uniqueCrops.length > 0 ? (
-                         <div className="flex flex-wrap gap-2">
-                           {uniqueCrops.map(crop => (
-                             <span key={crop} className="px-2 py-1 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-md text-sm border border-emerald-100 dark:border-emerald-800">
-                               {crop}
-                             </span>
-                           ))}
-                         </div>
-                       ) : (
-                         <div className="text-sm text-slate-400 italic">Ürün bilgisi yok</div>
-                       )}
-                     </div>
-                   </div>
-                 </>
-               );
+              const group = groups.find(g => g.id === selectedGroupId);
+              const groupFields = fields.filter(f => f.groupId === selectedGroupId);
+              const uniqueCrops = Array.from(new Set(groupFields.map(f => f.cropType).filter(Boolean)));
+
+              return (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="groupName">Grup Adı</Label>
+                    <Input
+                      id="groupName"
+                      value={group?.name || ""}
+                      onChange={(e) => group && handleRenameGroup(group.id, e.target.value)}
+                      placeholder="Grup adı girin"
+                    />
+                  </div>
+                  <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <div>
+                      <div className="text-sm text-slate-500 mb-1">Toplam Tarla</div>
+                      <div className="font-medium">{groupFields.length} adet</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-slate-500 mb-1">Ekilen Ürünler</div>
+                      {uniqueCrops.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {uniqueCrops.map(crop => (
+                            <span key={crop} className="px-2 py-1 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-md text-sm border border-emerald-100 dark:border-emerald-800">
+                              {crop}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-slate-400 italic">Ürün bilgisi yok</div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              );
             })() : (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="name">Tarla Adı / Parsel No</Label>
-                  <Input 
-                    id="name" 
+                  <Input
+                    id="name"
                     value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    placeholder="Örn: 145 Ada 2 Parsel" 
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Örn: 145 Ada 2 Parsel"
                   />
                 </div>
 
@@ -695,7 +697,7 @@ export default function Dashboard() {
                   <select
                     id="groupId"
                     value={formData.groupId}
-                    onChange={(e) => setFormData({...formData, groupId: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, groupId: e.target.value })}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option value="unassigned">Grupsuz</option>
@@ -707,31 +709,31 @@ export default function Dashboard() {
 
                 <div className="space-y-2">
                   <Label htmlFor="cropType">Ekili Ürün</Label>
-                  <Input 
-                    id="cropType" 
+                  <Input
+                    id="cropType"
                     value={formData.cropType}
-                    onChange={(e) => setFormData({...formData, cropType: e.target.value})}
-                    placeholder="Örn: Buğday, Mısır, Ayçiçeği..." 
+                    onChange={(e) => setFormData({ ...formData, cropType: e.target.value })}
+                    placeholder="Örn: Buğday, Mısır, Ayçiçeği..."
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="plantDate">Ekim Tarihi</Label>
-                  <Input 
-                    id="plantDate" 
-                    type="date" 
+                  <Input
+                    id="plantDate"
+                    type="date"
                     value={formData.plantDate}
-                    onChange={(e) => setFormData({...formData, plantDate: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, plantDate: e.target.value })}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="harvestDate">Tahmini Hasat Tarihi</Label>
-                  <Input 
-                    id="harvestDate" 
+                  <Input
+                    id="harvestDate"
                     type="date"
                     value={formData.harvestDate}
-                    onChange={(e) => setFormData({...formData, harvestDate: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, harvestDate: e.target.value })}
                   />
                 </div>
 
@@ -755,12 +757,11 @@ export default function Dashboard() {
                         key={preset.color}
                         type="button"
                         title={preset.name}
-                        onClick={() => setFormData({...formData, color: formData.color === preset.color ? '' : preset.color})}
-                        className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${
-                          formData.color === preset.color 
-                            ? 'border-slate-800 dark:border-white ring-2 ring-offset-2 ring-slate-400 scale-110' 
-                            : 'border-slate-200 dark:border-slate-600'
-                        }`}
+                        onClick={() => setFormData({ ...formData, color: formData.color === preset.color ? '' : preset.color })}
+                        className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${formData.color === preset.color
+                          ? 'border-slate-800 dark:border-white ring-2 ring-offset-2 ring-slate-400 scale-110'
+                          : 'border-slate-200 dark:border-slate-600'
+                          }`}
                         style={{ backgroundColor: preset.color }}
                       />
                     ))}
@@ -770,16 +771,15 @@ export default function Dashboard() {
                       <input
                         type="color"
                         value={formData.color || '#22c55e'}
-                        onChange={(e) => setFormData({...formData, color: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, color: e.target.value })}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       />
-                      <div 
-                        className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all hover:scale-110 ${
-                          formData.color && !['#22c55e','#ef4444','#3b82f6','#f97316','#8b5cf6','#eab308','#ec4899','#06b6d4'].includes(formData.color)
-                            ? 'border-slate-800 dark:border-white ring-2 ring-offset-2 ring-slate-400 scale-110'
-                            : 'border-slate-200 dark:border-slate-600'
-                        }`}
-                        style={{ backgroundColor: formData.color && !['#22c55e','#ef4444','#3b82f6','#f97316','#8b5cf6','#eab308','#ec4899','#06b6d4'].includes(formData.color) ? formData.color : '#d1d5db' }}
+                      <div
+                        className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all hover:scale-110 ${formData.color && !['#22c55e', '#ef4444', '#3b82f6', '#f97316', '#8b5cf6', '#eab308', '#ec4899', '#06b6d4'].includes(formData.color)
+                          ? 'border-slate-800 dark:border-white ring-2 ring-offset-2 ring-slate-400 scale-110'
+                          : 'border-slate-200 dark:border-slate-600'
+                          }`}
+                        style={{ backgroundColor: formData.color && !['#22c55e', '#ef4444', '#3b82f6', '#f97316', '#8b5cf6', '#eab308', '#ec4899', '#06b6d4'].includes(formData.color) ? formData.color : '#d1d5db' }}
                       >
                         <Plus className="w-3.5 h-3.5 text-white drop-shadow-sm" />
                       </div>
@@ -788,7 +788,7 @@ export default function Dashboard() {
                     {formData.color && (
                       <button
                         type="button"
-                        onClick={() => setFormData({...formData, color: ''})}
+                        onClick={() => setFormData({ ...formData, color: '' })}
                         className="ml-auto text-xs text-slate-400 hover:text-red-500 transition-colors"
                       >
                         Rengi kaldır
@@ -796,7 +796,7 @@ export default function Dashboard() {
                     )}
                   </div>
                 </div>
-                
+
                 {pendingCoordinates && (
                   <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
                     <div className="text-xs text-slate-500 mb-2">Koordinat Verisi</div>
@@ -812,8 +812,8 @@ export default function Dashboard() {
           {(selectedFieldId || pendingCoordinates) && (
             <div className="p-4 border-t bg-slate-50 dark:bg-slate-900/50 flex gap-2">
               {!pendingCoordinates && (
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="destructive"
                   type="button"
                   className="flex-1"
                   onClick={() => selectedFieldId && handleDeleteField(selectedFieldId)}
@@ -821,7 +821,7 @@ export default function Dashboard() {
                   Sil
                 </Button>
               )}
-              <Button 
+              <Button
                 className={`flex-1 ${pendingCoordinates ? "w-full" : ""}`}
                 onClick={handleSaveField}
               >
@@ -832,6 +832,35 @@ export default function Dashboard() {
           )}
         </aside>
       )}
+      {/* About Dialog */}
+      <Dialog open={isAboutOpen} onOpenChange={setIsAboutOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trees className="w-5 h-5 text-emerald-600" />
+              Field Manager Hakkında
+            </DialogTitle>
+            <DialogDescription>
+              Tarla ve ürün yönetimi için dijital çözüm.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Field Manager, çiftçilerin ve tarım işletmelerinin arazilerini harita üzerinden kolayca yönetmelerini sağlayan bir uygulamadır.
+            </p>
+            <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <h4 className="text-xs font-semibold text-slate-500 uppercase">Lisans</h4>
+              <p className="text-xs text-slate-500">
+                Licensed under GNU GPLv3<br />
+                This program comes with ABSOLUTELY NO WARRANTY.
+              </p>
+            </div>
+            <div className="pt-4 border-t text-xs text-slate-400 text-center">
+              Version 0.1.0 &bull; &copy; 2026 Field Manager Contributors
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
