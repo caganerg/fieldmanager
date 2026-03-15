@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { Trees, MapPin, Database, Settings, Trash2, Edit2, ChevronRight, ChevronDown, Save, X, Plus, Folder, FolderOpen, LayoutGrid, GripVertical, Palette, Download, Upload, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -585,10 +586,12 @@ export default function Dashboard() {
             <Info className="w-4 h-4" />
             <span className="text-sm">Hakkında</span>
           </Button>
-          <Button variant="ghost" className="justify-start gap-3 w-full text-slate-500">
-            <Settings className="w-4 h-4" />
-            <span className="text-sm">Ayarlar</span>
-          </Button>
+          <Link href="/ayarlar" className="w-full">
+            <Button variant="ghost" className="justify-start gap-3 w-full text-slate-500">
+              <Settings className="w-4 h-4" />
+              <span className="text-sm">Ayarlar</span>
+            </Button>
+          </Link>
         </div>
       </aside>
 
