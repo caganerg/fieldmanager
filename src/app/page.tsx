@@ -23,6 +23,31 @@ const Map = dynamic(() => import("@/components/Map"), {
   loading: () => <div className="w-full h-full flex flex-col items-center justify-center text-zinc-500 bg-zinc-100 dark:bg-zinc-900 absolute inset-0">Harita yükleniyor...</div>
 });
 
+// Calculate polygon area in square meters from LatLngTuple coordinates
+// Uses the Shoelace formula on a spherical Earth approximation
+function calculatePolygonArea(coordinates: LatLngTuple[]): number {
+  if (coordinates.length < 3) return 0;
+
+  const EARTH_RADIUS = 6371000; // meters
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+
+  let area = 0;
+  const n = coordinates.length;
+
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    const lat1 = toRad(coordinates[i][0]);
+    const lng1 = toRad(coordinates[i][1]);
+    const lat2 = toRad(coordinates[j][0]);
+    const lng2 = toRad(coordinates[j][1]);
+
+    area += (lng2 - lng1) * (2 + Math.sin(lat1) + Math.sin(lat2));
+  }
+
+  area = Math.abs((area * EARTH_RADIUS * EARTH_RADIUS) / 2);
+  return area;
+}
+
 export default function Dashboard() {
   const [isMounted, setIsMounted] = useState(false);
 
@@ -731,6 +756,33 @@ export default function Dashboard() {
                     placeholder="Örn: 145 Ada 2 Parsel"
                   />
                 </div>
+
+                {/* Area Display */}
+                {(selectedFieldId || pendingCoordinates) && (() => {
+                  const coords = pendingCoordinates || fields.find(f => f.id === selectedFieldId)?.coordinates;
+                  if (!coords || coords.length < 3) return null;
+                  const areaM2 = calculatePolygonArea(coords);
+                  const areaDekar = areaM2 / 1000;
+                  return (
+                    <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/15 border border-emerald-200 dark:border-emerald-800/50 p-4">
+                      <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-3">Tarla Alanı</div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-white dark:bg-zinc-900/60 rounded-lg p-3 text-center">
+                          <div className="text-lg font-bold text-zinc-800 dark:text-zinc-100">
+                            {areaM2 >= 1000 ? `${(areaM2 / 1000).toFixed(1)}k` : Math.round(areaM2).toLocaleString('tr-TR')}
+                          </div>
+                          <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">m²</div>
+                        </div>
+                        <div className="bg-white dark:bg-zinc-900/60 rounded-lg p-3 text-center">
+                          <div className="text-lg font-bold text-zinc-800 dark:text-zinc-100">
+                            {areaDekar.toFixed(2)}
+                          </div>
+                          <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">dekar (dönüm)</div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div className="space-y-2">
                   <Label htmlFor="groupId">Ait Olduğu Grup</Label>
