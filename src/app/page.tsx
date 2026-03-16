@@ -948,7 +948,7 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="pt-4 border-t text-xs text-zinc-400 text-center">
-              Version 0.1.0 &bull; &copy; 2026 Field Manager Contributors
+              Version 0.1.1 &bull; &copy; 2026 Field Manager Contributors
             </div>
           </div>
         </DialogContent>
@@ -980,22 +980,22 @@ export default function Dashboard() {
                     type="button"
                     onClick={() => setTheme(option.value)}
                     className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${theme === option.value
-                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 shadow-sm'
-                        : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 shadow-sm'
+                      : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
                       }`}
                   >
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${theme === option.value
-                        ? 'bg-emerald-100 dark:bg-emerald-800/40'
-                        : 'bg-zinc-100 dark:bg-zinc-800'
+                      ? 'bg-emerald-100 dark:bg-emerald-800/40'
+                      : 'bg-zinc-100 dark:bg-zinc-800'
                       }`}>
                       <option.icon className={`w-5 h-5 transition-colors ${theme === option.value
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : 'text-zinc-500 dark:text-zinc-400'
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-zinc-500 dark:text-zinc-400'
                         }`} />
                     </div>
                     <span className={`text-sm font-medium transition-colors ${theme === option.value
-                        ? 'text-emerald-700 dark:text-emerald-300'
-                        : 'text-zinc-600 dark:text-zinc-400'
+                      ? 'text-emerald-700 dark:text-emerald-300'
+                      : 'text-zinc-600 dark:text-zinc-400'
                       }`}>{option.label}</span>
                   </button>
                 ))}
