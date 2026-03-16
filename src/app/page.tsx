@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
-import { Trees, MapPin, Database, Settings, Trash2, Edit2, ChevronRight, ChevronDown, Save, X, Plus, Folder, FolderOpen, LayoutGrid, GripVertical, Palette, Download, Upload, Info } from "lucide-react";
+
+import { Trees, MapPin, Database, Settings, Trash2, Edit2, ChevronRight, ChevronDown, Save, X, Plus, Folder, FolderOpen, LayoutGrid, GripVertical, Palette, Download, Upload, Info, Sun, Moon, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,7 +20,7 @@ import type { LatLngTuple } from "leaflet";
 // Dynamically import Map with SSR disabled since Leaflet requires window/document
 const Map = dynamic(() => import("@/components/Map"), {
   ssr: false,
-  loading: () => <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 bg-slate-100 dark:bg-slate-900 absolute inset-0">Harita yükleniyor...</div>
+  loading: () => <div className="w-full h-full flex flex-col items-center justify-center text-zinc-500 bg-zinc-100 dark:bg-zinc-900 absolute inset-0">Harita yükleniyor...</div>
 });
 
 export default function Dashboard() {
@@ -44,6 +44,10 @@ export default function Dashboard() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [newGroupName, setNewGroupName] = useState("");
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Theme State
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -60,7 +64,42 @@ export default function Dashboard() {
 
   useEffect(() => {
     setIsMounted(true);
+    // Load saved theme preference
+    const savedTheme = localStorage.getItem('fieldmanager-theme') as 'light' | 'dark' | 'system' | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+    }
   }, []);
+
+  // Apply theme to <html> element
+  useEffect(() => {
+    const applyTheme = () => {
+      const root = document.documentElement;
+      if (theme === 'dark') {
+        root.classList.add('dark');
+      } else if (theme === 'light') {
+        root.classList.remove('dark');
+      } else {
+        // system
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          root.classList.add('dark');
+        } else {
+          root.classList.remove('dark');
+        }
+      }
+    };
+
+    applyTheme();
+    localStorage.setItem('fieldmanager-theme', theme);
+
+    // Listen for system theme changes when in 'system' mode
+    if (theme === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handler = () => applyTheme();
+      mediaQuery.addEventListener('change', handler);
+      return () => mediaQuery.removeEventListener('change', handler);
+    }
+  }, [theme]);
 
   const handlePolygonCreated = (coordinates: LatLngTuple[]) => {
     // Once polygon is drawn, stop drawing mode and open the new field form
@@ -334,9 +373,9 @@ export default function Dashboard() {
   const isRightPanelOpen = pendingCoordinates !== null || selectedFieldId !== null || selectedGroupId !== null;
 
   return (
-    <div className="flex h-screen w-full bg-slate-50 dark:bg-slate-950">
+    <div className="flex h-screen w-full bg-zinc-50 dark:bg-zinc-950">
       {/* Left Sidebar */}
-      <aside className="w-72 border-r bg-white dark:bg-slate-900 flex flex-col pt-6 shadow-sm z-20">
+      <aside className="w-72 border-r bg-white dark:bg-zinc-900 flex flex-col pt-6 shadow-sm z-20">
         <div className="flex items-center gap-2 mb-8 px-6 text-emerald-600 dark:text-emerald-400">
           <Trees className="w-8 h-8" />
           <h1 className="text-xl font-bold tracking-tight">Field Manager</h1>
@@ -360,12 +399,12 @@ export default function Dashboard() {
         <nav className="flex flex-col flex-1 overflow-y-auto">
           <div className="px-6 py-2">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                 Tarlalar & Gruplar
               </h3>
               <button
                 onClick={() => setIsAddingGroup(!isAddingGroup)}
-                className="text-slate-400 hover:text-emerald-500 transition-colors"
+                className="text-zinc-400 hover:text-emerald-500 transition-colors"
                 title="Yeni Grup Ekle"
               >
                 <Plus className="w-4 h-4" />
@@ -387,7 +426,7 @@ export default function Dashboard() {
             )}
 
             {fields.length === 0 && groups.length === 0 ? (
-              <div className="text-sm text-slate-500 italic py-4 text-center border-2 border-dashed rounded-lg border-slate-200 dark:border-slate-800">
+              <div className="text-sm text-zinc-500 italic py-4 text-center border-2 border-dashed rounded-lg border-zinc-200 dark:border-zinc-800">
                 Henüz tarla veya grup eklenmedi.
               </div>
             ) : (
@@ -427,34 +466,34 @@ export default function Dashboard() {
                           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleGroupSelect(group.id); if (!isExpanded) toggleGroupExpand(group.id); } }}
                           className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${selectedGroupId === group.id && !selectedFieldId
                             ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 font-medium border border-emerald-200 dark:border-emerald-800"
-                            : "hover:bg-slate-100 text-slate-700 dark:hover:bg-slate-800 dark:text-slate-300 border border-transparent"
+                            : "hover:bg-zinc-100 text-zinc-700 dark:hover:bg-zinc-800 dark:text-zinc-300 border border-transparent"
                             }`}
                         >
                           <div className="flex items-center gap-1.5 overflow-hidden">
-                            <GripVertical className="w-3.5 h-3.5 shrink-0 text-slate-300 dark:text-slate-600 cursor-grab active:cursor-grabbing" />
+                            <GripVertical className="w-3.5 h-3.5 shrink-0 text-zinc-300 dark:text-zinc-600 cursor-grab active:cursor-grabbing" />
                             <span
                               role="button"
                               tabIndex={0}
                               onClick={(e) => { e.stopPropagation(); toggleGroupExpand(group.id); }}
                               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); toggleGroupExpand(group.id); } }}
-                              className="p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                              className="p-0.5 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
                             >
                               {isExpanded
-                                ? <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                                : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                                ? <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
+                                : <ChevronRight className="w-3.5 h-3.5 text-zinc-400" />
                               }
                             </span>
                             {isExpanded
                               ? <FolderOpen className={`w-4 h-4 shrink-0 ${selectedGroupId === group.id && !selectedFieldId ? "text-emerald-500" : "text-amber-500"}`} />
-                              : <Folder className={`w-4 h-4 shrink-0 ${selectedGroupId === group.id && !selectedFieldId ? "text-emerald-500" : "text-slate-400"}`} />
+                              : <Folder className={`w-4 h-4 shrink-0 ${selectedGroupId === group.id && !selectedFieldId ? "text-emerald-500" : "text-zinc-400"}`} />
                             }
                             <span className="truncate">{group.name}</span>
-                            <span className="text-xs text-slate-400 ml-1">({groupFields.length})</span>
+                            <span className="text-xs text-zinc-400 ml-1">({groupFields.length})</span>
                           </div>
                         </div>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group.id); }}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 opacity-0 group-hover/item:opacity-100 text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-all"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 opacity-0 group-hover/item:opacity-100 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md transition-all"
                           title="Sil"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -463,7 +502,7 @@ export default function Dashboard() {
 
                       {/* Nested fields inside this group */}
                       {isExpanded && groupFields.length > 0 && (
-                        <ul className="ml-5 pl-3 border-l-2 border-slate-200 dark:border-slate-700 space-y-0.5 mt-0.5 mb-1">
+                        <ul className="ml-5 pl-3 border-l-2 border-zinc-200 dark:border-zinc-700 space-y-0.5 mt-0.5 mb-1">
                           {groupFields.map(field => (
                             <li
                               key={field.id}
@@ -484,22 +523,22 @@ export default function Dashboard() {
                                 onClick={() => handleFieldSelect(field.id)}
                                 className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-sm transition-colors ${selectedFieldId === field.id
                                   ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 font-medium border border-emerald-200 dark:border-emerald-800"
-                                  : "hover:bg-slate-100 text-slate-600 dark:hover:bg-slate-800 dark:text-slate-400 border border-transparent"
+                                  : "hover:bg-zinc-100 text-zinc-600 dark:hover:bg-zinc-800 dark:text-zinc-400 border border-transparent"
                                   }`}
                               >
                                 <div className="flex items-center gap-2 overflow-hidden">
-                                  <GripVertical className="w-3 h-3 shrink-0 text-slate-300 dark:text-slate-600 cursor-grab active:cursor-grabbing" />
+                                  <GripVertical className="w-3 h-3 shrink-0 text-zinc-300 dark:text-zinc-600 cursor-grab active:cursor-grabbing" />
                                   {field.color ? (
-                                    <span className="w-3.5 h-3.5 shrink-0 rounded-full border border-slate-200 dark:border-slate-600" style={{ backgroundColor: field.color }} />
+                                    <span className="w-3.5 h-3.5 shrink-0 rounded-full border border-zinc-200 dark:border-zinc-600" style={{ backgroundColor: field.color }} />
                                   ) : (
-                                    <MapPin className={`w-3.5 h-3.5 shrink-0 ${selectedFieldId === field.id ? "text-emerald-500" : "text-slate-400"}`} />
+                                    <MapPin className={`w-3.5 h-3.5 shrink-0 ${selectedFieldId === field.id ? "text-emerald-500" : "text-zinc-400"}`} />
                                   )}
                                   <span className="truncate text-[13px]">{field.name}</span>
                                 </div>
                               </button>
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleDeleteField(field.id); }}
-                                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 opacity-0 group-hover/field:opacity-100 text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-all"
+                                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 opacity-0 group-hover/field:opacity-100 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded transition-all"
                                 title="Sil"
                               >
                                 <Trash2 className="w-3 h-3" />
@@ -509,8 +548,8 @@ export default function Dashboard() {
                         </ul>
                       )}
                       {isExpanded && groupFields.length === 0 && (
-                        <div className="ml-5 pl-3 border-l-2 border-slate-200 dark:border-slate-700 py-2 mb-1">
-                          <p className="text-xs text-slate-400 italic">Tarla sürükleyerek ekleyin</p>
+                        <div className="ml-5 pl-3 border-l-2 border-zinc-200 dark:border-zinc-700 py-2 mb-1">
+                          <p className="text-xs text-zinc-400 italic">Tarla sürükleyerek ekleyin</p>
                         </div>
                       )}
                     </li>
@@ -538,15 +577,15 @@ export default function Dashboard() {
                       onClick={() => handleFieldSelect(field.id)}
                       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-colors ${selectedFieldId === field.id
                         ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 font-medium border border-emerald-200 dark:border-emerald-800"
-                        : "hover:bg-slate-100 text-slate-700 dark:hover:bg-slate-800 dark:text-slate-300 border border-transparent"
+                        : "hover:bg-zinc-100 text-zinc-700 dark:hover:bg-zinc-800 dark:text-zinc-300 border border-transparent"
                         }`}
                     >
                       <div className="flex items-center gap-2 overflow-hidden">
-                        <GripVertical className="w-3.5 h-3.5 shrink-0 text-slate-300 dark:text-slate-600 cursor-grab active:cursor-grabbing" />
+                        <GripVertical className="w-3.5 h-3.5 shrink-0 text-zinc-300 dark:text-zinc-600 cursor-grab active:cursor-grabbing" />
                         {field.color ? (
-                          <span className="w-4 h-4 shrink-0 rounded-full border border-slate-200 dark:border-slate-600" style={{ backgroundColor: field.color }} />
+                          <span className="w-4 h-4 shrink-0 rounded-full border border-zinc-200 dark:border-zinc-600" style={{ backgroundColor: field.color }} />
                         ) : (
-                          <MapPin className={`w-4 h-4 shrink-0 ${selectedFieldId === field.id ? "text-emerald-500" : "text-slate-400"}`} />
+                          <MapPin className={`w-4 h-4 shrink-0 ${selectedFieldId === field.id ? "text-emerald-500" : "text-zinc-400"}`} />
                         )}
                         <span className="truncate">{field.name}</span>
                       </div>
@@ -554,7 +593,7 @@ export default function Dashboard() {
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDeleteField(field.id); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 opacity-0 group-hover/field:opacity-100 text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-all"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 opacity-0 group-hover/field:opacity-100 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md transition-all"
                       title="Sil"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -574,31 +613,29 @@ export default function Dashboard() {
             onChange={handleImportData}
             className="hidden"
           />
-          <Button variant="ghost" className="justify-start gap-3 w-full text-slate-500" onClick={handleExportData}>
+          <Button variant="ghost" className="justify-start gap-3 w-full text-zinc-500" onClick={handleExportData}>
             <Download className="w-4 h-4" />
             <span className="text-sm">Dışa Aktar</span>
           </Button>
-          <Button variant="ghost" className="justify-start gap-3 w-full text-slate-500" onClick={() => fileInputRef.current?.click()}>
+          <Button variant="ghost" className="justify-start gap-3 w-full text-zinc-500" onClick={() => fileInputRef.current?.click()}>
             <Upload className="w-4 h-4" />
             <span className="text-sm">İçe Aktar</span>
           </Button>
-          <Button variant="ghost" className="justify-start gap-3 w-full text-slate-500" onClick={() => setIsAboutOpen(true)}>
+          <Button variant="ghost" className="justify-start gap-3 w-full text-zinc-500" onClick={() => setIsAboutOpen(true)}>
             <Info className="w-4 h-4" />
             <span className="text-sm">Hakkında</span>
           </Button>
-          <Link href="/ayarlar" className="w-full">
-            <Button variant="ghost" className="justify-start gap-3 w-full text-slate-500">
-              <Settings className="w-4 h-4" />
-              <span className="text-sm">Ayarlar</span>
-            </Button>
-          </Link>
+          <Button variant="ghost" className="justify-start gap-3 w-full text-zinc-500" onClick={() => setIsSettingsOpen(true)}>
+            <Settings className="w-4 h-4" />
+            <span className="text-sm">Ayarlar</span>
+          </Button>
         </div>
       </aside>
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col relative z-0">
-        <header className="h-16 border-b bg-white/80 backdrop-blur-md dark:bg-slate-900/80 flex items-center px-6 shadow-sm absolute top-0 w-full z-10 pointer-events-none">
-          <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 pointer-events-auto">
+        <header className="h-16 border-b bg-white/80 backdrop-blur-md dark:bg-zinc-900/80 flex items-center px-6 shadow-sm absolute top-0 w-full z-10 pointer-events-none">
+          <h2 className="text-lg font-semibold text-zinc-800 dark:text-zinc-100 pointer-events-auto">
             {isDrawingMode ? (
               <span className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full text-sm border border-emerald-200">
                 <Edit2 className="w-4 h-4 animate-pulse" />
@@ -609,7 +646,7 @@ export default function Dashboard() {
         </header>
 
         {/* Map Container */}
-        <div className="flex-1 w-full h-full relative z-0 bg-slate-200 dark:bg-slate-800">
+        <div className="flex-1 w-full h-full relative z-0 bg-zinc-200 dark:bg-zinc-800">
           {isMounted && (
             <Map
               fields={selectedGroupId === null ? fields : fields.filter(f => f.groupId === selectedGroupId)}
@@ -624,9 +661,9 @@ export default function Dashboard() {
 
       {/* Right Data Panel */}
       {isRightPanelOpen && (
-        <aside className="w-80 border-l bg-white dark:bg-slate-900 flex flex-col shadow-xl z-20 animate-in slide-in-from-right duration-200">
+        <aside className="w-80 border-l bg-white dark:bg-zinc-900 flex flex-col shadow-xl z-20 animate-in slide-in-from-right duration-200">
           <div className="h-16 flex items-center justify-between px-6 border-b">
-            <h2 className="font-semibold text-slate-800 dark:text-slate-100">
+            <h2 className="font-semibold text-zinc-800 dark:text-zinc-100">
               {selectedGroupId !== null && !selectedFieldId && !pendingCoordinates
                 ? "Grup Detayı"
                 : pendingCoordinates
@@ -638,7 +675,7 @@ export default function Dashboard() {
                 handleCancelForm();
                 setSelectedGroupId(null);
               }}
-              className="p-2 -mr-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+              className="p-2 -mr-2 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 rounded-full transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -661,13 +698,13 @@ export default function Dashboard() {
                       placeholder="Grup adı girin"
                     />
                   </div>
-                  <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
                     <div>
-                      <div className="text-sm text-slate-500 mb-1">Toplam Tarla</div>
+                      <div className="text-sm text-zinc-500 mb-1">Toplam Tarla</div>
                       <div className="font-medium">{groupFields.length} adet</div>
                     </div>
                     <div>
-                      <div className="text-sm text-slate-500 mb-1">Ekilen Ürünler</div>
+                      <div className="text-sm text-zinc-500 mb-1">Ekilen Ürünler</div>
                       {uniqueCrops.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
                           {uniqueCrops.map(crop => (
@@ -677,7 +714,7 @@ export default function Dashboard() {
                           ))}
                         </div>
                       ) : (
-                        <div className="text-sm text-slate-400 italic">Ürün bilgisi yok</div>
+                        <div className="text-sm text-zinc-400 italic">Ürün bilgisi yok</div>
                       )}
                     </div>
                   </div>
@@ -762,8 +799,8 @@ export default function Dashboard() {
                         title={preset.name}
                         onClick={() => setFormData({ ...formData, color: formData.color === preset.color ? '' : preset.color })}
                         className={`w-8 h-8 rounded-full border-2 transition-all hover:scale-110 ${formData.color === preset.color
-                          ? 'border-slate-800 dark:border-white ring-2 ring-offset-2 ring-slate-400 scale-110'
-                          : 'border-slate-200 dark:border-slate-600'
+                          ? 'border-zinc-800 dark:border-white ring-2 ring-offset-2 ring-zinc-400 scale-110'
+                          : 'border-zinc-200 dark:border-zinc-600'
                           }`}
                         style={{ backgroundColor: preset.color }}
                       />
@@ -779,20 +816,20 @@ export default function Dashboard() {
                       />
                       <div
                         className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all hover:scale-110 ${formData.color && !['#22c55e', '#ef4444', '#3b82f6', '#f97316', '#8b5cf6', '#eab308', '#ec4899', '#06b6d4'].includes(formData.color)
-                          ? 'border-slate-800 dark:border-white ring-2 ring-offset-2 ring-slate-400 scale-110'
-                          : 'border-slate-200 dark:border-slate-600'
+                          ? 'border-zinc-800 dark:border-white ring-2 ring-offset-2 ring-zinc-400 scale-110'
+                          : 'border-zinc-200 dark:border-zinc-600'
                           }`}
                         style={{ backgroundColor: formData.color && !['#22c55e', '#ef4444', '#3b82f6', '#f97316', '#8b5cf6', '#eab308', '#ec4899', '#06b6d4'].includes(formData.color) ? formData.color : '#d1d5db' }}
                       >
                         <Plus className="w-3.5 h-3.5 text-white drop-shadow-sm" />
                       </div>
                     </label>
-                    <span className="text-xs text-slate-500">Özel renk</span>
+                    <span className="text-xs text-zinc-500">Özel renk</span>
                     {formData.color && (
                       <button
                         type="button"
                         onClick={() => setFormData({ ...formData, color: '' })}
-                        className="ml-auto text-xs text-slate-400 hover:text-red-500 transition-colors"
+                        className="ml-auto text-xs text-zinc-400 hover:text-red-500 transition-colors"
                       >
                         Rengi kaldır
                       </button>
@@ -801,9 +838,9 @@ export default function Dashboard() {
                 </div>
 
                 {pendingCoordinates && (
-                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
-                    <div className="text-xs text-slate-500 mb-2">Koordinat Verisi</div>
-                    <div className="bg-slate-50 dark:bg-slate-950 p-2 rounded text-xs font-mono text-slate-600 line-clamp-3">
+                  <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                    <div className="text-xs text-zinc-500 mb-2">Koordinat Verisi</div>
+                    <div className="bg-zinc-50 dark:bg-zinc-950 p-2 rounded text-xs font-mono text-zinc-600 line-clamp-3">
                       {pendingCoordinates.length} köşe noktası çizildi.
                     </div>
                   </div>
@@ -813,7 +850,7 @@ export default function Dashboard() {
           </div>
 
           {(selectedFieldId || pendingCoordinates) && (
-            <div className="p-4 border-t bg-slate-50 dark:bg-slate-900/50 flex gap-2">
+            <div className="p-4 border-t bg-zinc-50 dark:bg-zinc-900/50 flex gap-2">
               {!pendingCoordinates && (
                 <Button
                   variant="destructive"
@@ -848,18 +885,76 @@ export default function Dashboard() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <p className="text-sm text-slate-600 dark:text-slate-400">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
               Field Manager, çiftçilerin ve tarım işletmelerinin arazilerini harita üzerinden kolayca yönetmelerini sağlayan bir uygulamadır.
             </p>
-            <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <h4 className="text-xs font-semibold text-slate-500 uppercase">Lisans</h4>
-              <p className="text-xs text-slate-500">
+            <div className="space-y-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+              <h4 className="text-xs font-semibold text-zinc-500 uppercase">Lisans</h4>
+              <p className="text-xs text-zinc-500">
                 Licensed under GNU GPLv3<br />
                 This program comes with ABSOLUTELY NO WARRANTY.
               </p>
             </div>
-            <div className="pt-4 border-t text-xs text-slate-400 text-center">
+            <div className="pt-4 border-t text-xs text-zinc-400 text-center">
               Version 0.1.0 &bull; &copy; 2026 Field Manager Contributors
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Settings Dialog */}
+      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5 text-emerald-600" />
+              Ayarlar
+            </DialogTitle>
+            <DialogDescription>
+              Uygulama ayarlarını buradan yönetebilirsiniz.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            {/* Theme Selection */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Tema</Label>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { value: 'light' as const, label: 'Açık', icon: Sun, description: 'Açık tema' },
+                  { value: 'dark' as const, label: 'Koyu', icon: Moon, description: 'Koyu tema' },
+                  { value: 'system' as const, label: 'Sistem', icon: Monitor, description: 'Sistem teması' },
+                ].map(option => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setTheme(option.value)}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${theme === option.value
+                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 shadow-sm'
+                        : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                      }`}
+                  >
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${theme === option.value
+                        ? 'bg-emerald-100 dark:bg-emerald-800/40'
+                        : 'bg-zinc-100 dark:bg-zinc-800'
+                      }`}>
+                      <option.icon className={`w-5 h-5 transition-colors ${theme === option.value
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-zinc-500 dark:text-zinc-400'
+                        }`} />
+                    </div>
+                    <span className={`text-sm font-medium transition-colors ${theme === option.value
+                        ? 'text-emerald-700 dark:text-emerald-300'
+                        : 'text-zinc-600 dark:text-zinc-400'
+                      }`}>{option.label}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                {theme === 'system'
+                  ? 'Tema, işletim sisteminizin ayarına göre otomatik değişir.'
+                  : theme === 'dark'
+                    ? 'Koyu tema aktif. Göz yorgunluğunu azaltır.'
+                    : 'Açık tema aktif.'}
+              </p>
             </div>
           </div>
         </DialogContent>
