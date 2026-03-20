@@ -948,7 +948,7 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="pt-4 border-t text-xs text-zinc-400 text-center">
-              Version 0.2.0 &bull; &copy; 2026 Field Manager Contributors
+              Version 0.2.1 &bull; &copy; 2026 Field Manager Contributors
             </div>
           </div>
         </DialogContent>

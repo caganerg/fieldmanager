@@ -81,9 +81,7 @@ export default function Map({
       
       // Remove the visually drawn layer from the FeatureGroup immediately
       // because we will render it natively as a <Polygon> from our state 'fields'.
-      if (layer._map) {
-        layer._map.removeLayer(layer);
-      }
+      layer.remove();
       
       onPolygonCreated(coords);
     }
@@ -161,21 +159,6 @@ export default function Map({
 // Internal component to handle programmatic drawing enablement
 function DrawControlHandler({ isDrawingMode }: { isDrawingMode: boolean }) {
   const map = useMapEvents({});
-  
-  // Need to cast _toolbars as any to access private leaflet-draw API
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const getDrawToolbar = (m: any) => {
-    // Leaflet Draw attaches a custom object to the map instances
-    // Unfortunately, it's not well-typed in @types/leaflet-draw
-    for (const key in m) {
-      if (m[key] && m[key]._toolbars && m[key]._toolbars.draw) {
-         return m[key]._toolbars.draw;
-      }
-    }
-    return null;
-  };
-
-  // Another approach using querySelector since leaflet-draw mounts toolbars globally to the map container
   useEffect(() => {
     if (isDrawingMode && map) {
       // Find the polygon draw button and click it programmatically to activate Drawing mode immediately
