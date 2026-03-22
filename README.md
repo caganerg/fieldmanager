@@ -3,12 +3,12 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
-If you are going to do self-hosting(SystemD and a Debian base are required.):
+If you are going to do self-hosting (SystemD and a Debian base are required.):
 ```bash
 curl -sSL https://raw.githubusercontent.com/caganerg/fieldmanager/main/install.sh | bash
 ```
 
-First, run the development server:
+Run the development server:
 
 ```bash
 npm run dev
