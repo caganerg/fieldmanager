@@ -85,6 +85,7 @@ export default function Dashboard() {
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isWeatherOpen, setIsWeatherOpen] = useState(false);
+  const [isWelcomeOpen, setIsWelcomeOpen] = useState(false);
   const [openWeatherApiKey, setOpenWeatherApiKey] = useState("");
   const [apiKeyInput, setApiKeyInput] = useState("");
 
@@ -116,6 +117,12 @@ export default function Dashboard() {
     if (savedApiKey) {
       setOpenWeatherApiKey(savedApiKey);
       setApiKeyInput(savedApiKey);
+    }
+
+    // Check if first visit for welcome modal
+    const hasWelcomed = localStorage.getItem('fieldmanager-welcomed');
+    if (!hasWelcomed) {
+      setIsWelcomeOpen(true);
     }
   }, []);
 
@@ -1108,6 +1115,47 @@ export default function Dashboard() {
                 Hava durumu verisi için gereklidir. Anahtar sadece sizin tarayıcınızda (localStorage) saklanır.
               </p>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Welcome Dialog */}
+      <Dialog open={isWelcomeOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsWelcomeOpen(false);
+          localStorage.setItem('fieldmanager-welcomed', 'true');
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-emerald-600">
+              <Trees className="w-6 h-6" />
+              Field Manager'a Hoş Geldiniz!
+            </DialogTitle>
+            <DialogDescription className="text-sm pt-2">
+              Tarlalarınızı yönetmek ve hava durumunu takip etmek artık çok kolay.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2 text-sm text-zinc-600 dark:text-zinc-300">
+            <p>
+              <strong>Nasıl Kullanılır?</strong>
+              <br/>
+              Harita üzerinden tarlalarınızı çizebilir, ürün bilgilerinizi girebilir ve kendi gruplarınızı oluşturarak tarlalarınızı organize edebilirsiniz.
+            </p>
+            <p>
+              <strong>Hava Durumu Özelliği</strong>
+              <br/>
+              Eklediğiniz tarlaların anlık hava durumu ve tahminlerini görebilmek için bir <strong>OpenWeather API Anahtarı</strong> gereklidir. Bu anahtarı sol menüdeki <em>Ayarlar</em> bölümünden ekleyebilirsiniz.
+            </p>
+            <Button 
+              className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white" 
+              onClick={() => {
+                setIsWelcomeOpen(false);
+                localStorage.setItem('fieldmanager-welcomed', 'true');
+              }}
+            >
+              Başla
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
