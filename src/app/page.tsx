@@ -1112,7 +1112,7 @@ export default function Dashboard() {
                 </Button>
               </div>
               <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                Hava durumu verisi için gereklidir. Anahtar sadece sizin tarayıcınızda (localStorage) saklanır.
+                Hava durumu verisi için gereklidir. Buraya girdiğiniz anahtar, sunucuya tanımlanmış olandan daha önceliklidir. Sadece tarayıcınızda (localStorage) saklanır.
               </p>
             </div>
           </div>
@@ -1145,7 +1145,7 @@ export default function Dashboard() {
             <p>
               <strong>Hava Durumu Özelliği</strong>
               <br/>
-              Eklediğiniz tarlaların anlık hava durumu ve tahminlerini görebilmek için bir <strong>OpenWeather API Anahtarı</strong> gereklidir. Bu anahtarı sol menüdeki <em>Ayarlar</em> bölümünden ekleyebilirsiniz.
+              Hava durumu özellikleri için bir <strong>OpenWeather API Anahtarı</strong> gereklidir. Sunucuya tanımlanmış bir API anahtarı varsa otomatik kullanılacaktır. Kendi özel anahtarınızı kullanmak isterseniz sol menüdeki <em>Ayarlar</em> bölümünden ekleyebilirsiniz (sizin eklediğiniz anahtar her zaman önceliklidir).
             </p>
             <Button 
               className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white" 

@@ -64,40 +64,60 @@ else
   fi
 fi
 
+# Ask for API Key
+echo -e "\n${GREEN}>> OpenWeather API Key Setup${NC}"
+read -p "Sunucuya kurmak istiyorsanız hava durumu API anahtarınızı girin (yoksa boş bırakın): " WEATHER_API_KEY
+if [ -n "$WEATHER_API_KEY" ]; then
+  echo "OPENWEATHER_API_KEY=$WEATHER_API_KEY" > .env.local
+  echo -e "${GREEN}>> API Key saved to .env.local${NC}"
+fi
+
 # 3. NPM Install and Build
 echo -e "\n${GREEN}[3/4] Installing NPM dependencies and building the application...${NC}"
 npm install
 npm run build
 
-# 4. Process Management (PM2)
-echo -e "\n${GREEN}[4/4] Setting up PM2 for background process management...${NC}"
-if ! command -v pm2 > /dev/null; then
-  echo -e "${YELLOW}>> PM2 not found. Installing PM2 globally...${NC}"
-  $SUDO npm install -g pm2
-fi
+# 4. Process Management (Systemd)
+echo -e "\n${GREEN}[4/4] Setting up Systemd for background process management...${NC}"
 
-pm2 stop fieldmanager 2>/dev/null || true
-pm2 delete fieldmanager 2>/dev/null || true
+# Stop and disable if exists
+$SUDO systemctl stop fieldmanager 2>/dev/null || true
+$SUDO systemctl disable fieldmanager 2>/dev/null || true
 
-# Start the application
-pm2 start npm --name "fieldmanager" -- run start
+# Find npm path
+NPM_PATH=$(command -v npm)
 
-# Setup PM2 to start on boot
-echo -e "${GREEN}>> Configuring PM2 startup script...${NC}"
-PM2_STARTUP_CMD=$(pm2 startup ubuntu -u $USER --hp $HOME | tail -n 1)
-if [ -n "$SUDO" ]; then
-  eval "$SUDO $PM2_STARTUP_CMD"
-else
-  eval "$PM2_STARTUP_CMD"
-fi
-pm2 save
+SERVICE_FILE="/etc/systemd/system/fieldmanager.service"
+echo -e "${GREEN}>> Creating systemd service at $SERVICE_FILE...${NC}"
+
+$SUDO bash -c "cat > $SERVICE_FILE" <<EOF
+[Unit]
+Description=Field Manager Next.js App
+After=network.target
+
+[Service]
+Type=simple
+User=$USER
+WorkingDirectory=$PROJECT_DIR
+ExecStart=$NPM_PATH run start
+Restart=on-failure
+Environment=NODE_ENV=production
+Environment=PORT=3000
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+$SUDO systemctl daemon-reload
+$SUDO systemctl enable fieldmanager
+$SUDO systemctl start fieldmanager
 
 echo -e "\n${BLUE}==========================================${NC}"
 echo -e "${GREEN}  Installation Complete! 🚀 ${NC}"
 echo -e "${BLUE}==========================================${NC}"
-echo -e "${GREEN}Your Next.js app 'Field Manager' is now running in the background via PM2.${NC}"
-echo -e "You can check the status with: ${YELLOW}pm2 status${NC}"
-echo -e "You can view logs with:        ${YELLOW}pm2 logs fieldmanager${NC}"
+echo -e "${GREEN}Your Next.js app 'Field Manager' is now running in the background via systemd.${NC}"
+echo -e "You can check the status with: ${YELLOW}sudo systemctl status fieldmanager${NC}"
+echo -e "You can view logs with:        ${YELLOW}sudo journalctl -ur fieldmanager${NC}"
 echo -e "The app is running on port:    ${YELLOW}3000${NC} (default)"
 echo -e "\n${YELLOW}Note: If you have a firewall enabled, don't forget to allow the port:${NC}"
 echo -e "sudo ufw allow 3000/tcp\n"
