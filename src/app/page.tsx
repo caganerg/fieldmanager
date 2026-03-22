@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 
-import { Trees, MapPin, Database, Settings, Trash2, Edit2, ChevronRight, ChevronDown, Save, X, Plus, Folder, FolderOpen, LayoutGrid, GripVertical, Palette, Download, Upload, Info, Sun, Moon, Monitor } from "lucide-react";
+import { Trees, MapPin, Database, Settings, Trash2, Edit2, ChevronRight, ChevronDown, Save, X, Plus, Folder, FolderOpen, LayoutGrid, GripVertical, Palette, Download, Upload, Info, Sun, Moon, Monitor, CloudRain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,12 +16,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { type FieldPolygon } from "@/components/Map";
 import type { LatLngTuple } from "leaflet";
+import WeatherDashboard from "@/components/WeatherDashboard";
 
 // Dynamically import Map with SSR disabled since Leaflet requires window/document
 const Map = dynamic(() => import("@/components/Map"), {
   ssr: false,
   loading: () => <div className="w-full h-full flex flex-col items-center justify-center text-zinc-500 bg-zinc-100 dark:bg-zinc-900 absolute inset-0">Harita yükleniyor...</div>
 });
+
+// Calculate simple bounding box center for a polygon
+function getPolygonCenter(coordinates: LatLngTuple[]): LatLngTuple | null {
+  if (!coordinates || coordinates.length === 0) return null;
+  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+  coordinates.forEach(([lat, lng]) => {
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+    if (lng < minLng) minLng = lng;
+    if (lng > maxLng) maxLng = lng;
+  });
+  return [(minLat + maxLat) / 2, (minLng + maxLng) / 2];
+}
 
 // Calculate polygon area in square meters from LatLngTuple coordinates
 // Uses the Shoelace formula on a spherical Earth approximation
@@ -70,6 +84,9 @@ export default function Dashboard() {
   const [newGroupName, setNewGroupName] = useState("");
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isWeatherOpen, setIsWeatherOpen] = useState(false);
+  const [openWeatherApiKey, setOpenWeatherApiKey] = useState("");
+  const [apiKeyInput, setApiKeyInput] = useState("");
 
   // Theme State
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
@@ -93,6 +110,12 @@ export default function Dashboard() {
     const savedTheme = localStorage.getItem('fieldmanager-theme') as 'light' | 'dark' | 'system' | null;
     if (savedTheme) {
       setTheme(savedTheme);
+    }
+    // Load saved OpenWeather API key
+    const savedApiKey = localStorage.getItem('fieldmanager-weather-api-key');
+    if (savedApiKey) {
+      setOpenWeatherApiKey(savedApiKey);
+      setApiKeyInput(savedApiKey);
     }
   }, []);
 
@@ -659,7 +682,7 @@ export default function Dashboard() {
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col relative z-0">
-        <header className="h-16 border-b bg-white/80 backdrop-blur-md dark:bg-zinc-900/80 flex items-center px-6 shadow-sm absolute top-0 w-full z-10 pointer-events-none">
+        <header className="h-16 border-b bg-white/80 backdrop-blur-md dark:bg-zinc-900/80 flex items-center justify-between px-6 shadow-sm absolute top-0 w-full z-10 pointer-events-none">
           <h2 className="text-lg font-semibold text-zinc-800 dark:text-zinc-100 pointer-events-auto">
             {isDrawingMode ? (
               <span className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full text-sm border border-emerald-200">
@@ -668,6 +691,52 @@ export default function Dashboard() {
               </span>
             ) : "Harita Görünümü"}
           </h2>
+          
+          <div className="pointer-events-auto flex items-center gap-3 relative">
+            {fields.length > 0 && (
+              <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-1 shadow-sm">
+                <select 
+                  className="bg-transparent text-sm border-none focus:ring-0 outline-none px-2 py-1 cursor-pointer text-zinc-700 dark:text-zinc-300"
+                  value={selectedFieldId || ""}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    if (id) {
+                      handleFieldSelect(id);
+                      setIsWeatherOpen(true);
+                    } else {
+                      handleFieldSelect("");
+                      setIsWeatherOpen(false);
+                    }
+                  }}
+                >
+                  <option value="">Tarla Seçin (Hava Durumu)</option>
+                  {fields.map(f => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </select>
+                <button 
+                  onClick={() => selectedFieldId && setIsWeatherOpen(!isWeatherOpen)}
+                  disabled={!selectedFieldId}
+                  className={`p-1.5 rounded-md transition-colors ${isWeatherOpen ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500'} disabled:opacity-50 disabled:cursor-not-allowed`}
+                  title="Hava Durumu"
+                >
+                  <CloudRain className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+            
+            {/* Weather Dashboard Popover */}
+            {isWeatherOpen && selectedFieldId && (
+              <div className="absolute top-full right-0 mt-2 z-50">
+                {(() => {
+                  const field = fields.find(f => f.id === selectedFieldId);
+                  const center = field ? getPolygonCenter(field.coordinates) : null;
+                  if (!center) return null;
+                  return <WeatherDashboard lat={center[0]} lon={center[1]} apiKey={openWeatherApiKey || undefined} />;
+                })()}
+              </div>
+            )}
+          </div>
         </header>
 
         {/* Map Container */}
@@ -1006,6 +1075,37 @@ export default function Dashboard() {
                   : theme === 'dark'
                     ? 'Koyu tema aktif. Göz yorgunluğunu azaltır.'
                     : 'Açık tema aktif.'}
+              </p>
+            </div>
+            
+            {/* OpenWeather API Key Selection */}
+            <div className="space-y-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+              <Label className="text-sm font-medium">OpenWeather API Anahtarı</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  placeholder="Örn: 1a2b3c4d5e..."
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  onKeyDown={(e) => {
+                     if (e.key === 'Enter') {
+                       setOpenWeatherApiKey(apiKeyInput);
+                       localStorage.setItem('fieldmanager-weather-api-key', apiKeyInput);
+                     }
+                  }}
+                />
+                <Button 
+                  onClick={() => {
+                    setOpenWeatherApiKey(apiKeyInput);
+                    localStorage.setItem('fieldmanager-weather-api-key', apiKeyInput);
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+                >
+                  Uygula
+                </Button>
+              </div>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500">
+                Hava durumu verisi için gereklidir. Anahtar sadece sizin tarayıcınızda (localStorage) saklanır.
               </p>
             </div>
           </div>
