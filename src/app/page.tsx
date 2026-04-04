@@ -1019,7 +1019,7 @@ export default function Dashboard() {
             <div className="space-y-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
               <h4 className="text-xs font-semibold text-zinc-500 uppercase">Lisans</h4>
               <p className="text-xs text-zinc-500">
-                Licensed under GNU GPLv3<br />
+                Licensed under GNU Affero General Public License v3.0 (AGPL-3.0)<br />
                 This program comes with ABSOLUTELY NO WARRANTY.
               </p>
             </div>
