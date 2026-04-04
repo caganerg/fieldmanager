@@ -46,14 +46,15 @@ This project is a product of **Vibe Coding**.
 
 ## License
 
-This project is licensed under the **GNU General Public License v3.0**. 
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. 
 
 You are free to:
 * **Share** — copy and redistribute the material in any medium or format.
 * **Adapt** — remix, transform, and build upon the material.
 
 Under the following terms:
-* **Attribution** — You must give appropriate credit and provide a link to the license.
+* **Attribution** — You must give appropriate credit, provide a link to the license, and indicate if changes were made.
+* **Network Interaction** — If you modify the Program, your modified version must prominently offer all users interacting with it remotely through a computer network an opportunity to receive the Corresponding Source of your version.
 * **ShareAlike** — If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original.
 
 For more details, please see the [LICENSE](LICENSE) file included in this repository.
