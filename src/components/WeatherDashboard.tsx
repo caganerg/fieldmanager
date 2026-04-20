@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((res) => {
-  if (!res.ok) throw new Error("API Hatası");
+  if (!res.ok) throw new Error("API Error");
   return res.json();
 });
 
@@ -52,8 +52,11 @@ interface WeatherDashboardProps {
   apiKey?: string;
 }
 
-export default function WeatherDashboard({ lat, lon, apiKey }: WeatherDashboardProps) {
-  const { data, error, isLoading } = useSWR(`/api/weather?lat=${lat}&lon=${lon}${apiKey ? `&apiKey=${apiKey}` : ''}`, fetcher);
+import { translations, Language } from "@/lib/translations";
+
+export default function WeatherDashboard({ lat, lon, apiKey, lang = "en" }: WeatherDashboardProps & { lang?: Language }) {
+  const t = translations[lang];
+  const { data, error, isLoading } = useSWR(`/api/weather?lat=${lat}&lon=${lon}&lang=${lang}${apiKey ? `&apiKey=${apiKey}` : ''}`, fetcher);
 
   if (isLoading) {
     return (
@@ -77,8 +80,8 @@ export default function WeatherDashboard({ lat, lon, apiKey }: WeatherDashboardP
       <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl p-4 shadow-sm w-full md:w-[350px] flex items-start gap-3">
         <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
         <div className="text-sm text-red-600 dark:text-red-400">
-          <p className="font-semibold mb-1">Hava Durumu Alınamadı</p>
-          <p>{data?.error || "Bir hata oluştu. API anahtarını kontrol edin."}</p>
+          <p className="font-semibold mb-1">{t.weatherFetchError}</p>
+          <p>{data?.error || ""}</p>
         </div>
       </div>
     );
@@ -93,7 +96,7 @@ export default function WeatherDashboard({ lat, lon, apiKey }: WeatherDashboardP
       {/* Current Weather */}
       <div className="p-4 md:p-5 flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/50">
         <div>
-          <div className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-1">Anlık Durum</div>
+          <div className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-1">{t.weatherCurrent}</div>
           <div className="flex items-center gap-3">
             {getWeatherIcon(current.weather[0].icon, "w-10 h-10")}
             <div>
@@ -112,28 +115,28 @@ export default function WeatherDashboard({ lat, lon, apiKey }: WeatherDashboardP
             <Droplets className="w-3.5 h-3.5 text-blue-500" />
             <span className="font-medium">{current.main.humidity}%</span>
           </div>
-          <div className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400 cursor-help" title="Yağış / Bulut">
+          <div className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400 cursor-help" title="{t.weatherRainCloud}">
             <CloudRain className="w-3.5 h-3.5 text-blue-400" />
             <span className="font-medium">{current.clouds?.all || 0}%</span>
           </div>
           <div className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400 col-span-2 mt-1">
             <Wind className="w-3.5 h-3.5 text-teal-500" />
-            <span className="font-medium">{current.wind.speed.toFixed(1)} m/s Rüzgar</span>
+            <span className="font-medium">{current.wind.speed.toFixed(1)} m/s {t.weatherWind}</span>
           </div>
         </div>
       </div>
 
       {/* 5-Day Forecast */}
       <div className="p-4 bg-zinc-50 dark:bg-zinc-950/50">
-        <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">5 Günlük Özet</div>
+        <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">{t.weatherForecast}</div>
         <div className="flex justify-between items-center gap-1">
-          {forecast?.slice(0, 5).map((day: any, i: number) => {
+          {forecast?.slice(0, 5).map((day: { dt: number; weather: { icon: string }[]; main: { temp_min: number; temp_max: number }; pop?: number }, i: number) => {
             const date = new Date(day.dt * 1000);
             const isToday = i === 0;
             return (
               <div key={day.dt} className="flex flex-col items-center gap-1.5 flex-1 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 p-1.5 rounded-lg transition-colors">
                 <span className={`text-[10px] font-semibold uppercase ${isToday ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500"}`}>
-                  {isToday ? "BUGÜN" : new Intl.DateTimeFormat('tr-TR', { weekday: 'short' }).format(date)}
+                  {isToday ? t.weatherToday : new Intl.DateTimeFormat(lang === "en" ? "en-US" : "tr-TR", { weekday: 'short' }).format(date)}
                 </span>
                 {getWeatherIcon(day.weather[0].icon, "w-5 h-5")}
                 <div className="text-sm font-bold text-zinc-800 dark:text-zinc-200">

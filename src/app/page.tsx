@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 
-import { Trees, MapPin, Database, Settings, Trash2, Edit2, ChevronRight, ChevronDown, Save, X, Plus, Folder, FolderOpen, LayoutGrid, GripVertical, Palette, Download, Upload, Info, Sun, Moon, Monitor, CloudRain } from "lucide-react";
+import { Trees, MapPin, Settings, Trash2, Edit2, ChevronRight, ChevronDown, Save, X, Plus, Folder, FolderOpen, GripVertical, Palette, Download, Upload, Info, Sun, Moon, Monitor, CloudRain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,11 +17,12 @@ import { Label } from "@/components/ui/label";
 import { type FieldPolygon } from "@/components/Map";
 import type { LatLngTuple } from "leaflet";
 import WeatherDashboard from "@/components/WeatherDashboard";
+import { translations, Language } from "@/lib/translations";
 
 // Dynamically import Map with SSR disabled since Leaflet requires window/document
 const Map = dynamic(() => import("@/components/Map"), {
   ssr: false,
-  loading: () => <div className="w-full h-full flex flex-col items-center justify-center text-zinc-500 bg-zinc-100 dark:bg-zinc-900 absolute inset-0">Harita yükleniyor...</div>
+  loading: () => <div className="w-full h-full flex flex-col items-center justify-center text-zinc-500 bg-zinc-100 dark:bg-zinc-900 absolute inset-0">Loading map...</div>
 });
 
 // Calculate simple bounding box center for a polygon
@@ -64,6 +65,7 @@ function calculatePolygonArea(coordinates: LatLngTuple[]): number {
 
 export default function Dashboard() {
   const [isMounted, setIsMounted] = useState(false);
+  const [lang, setLang] = useState<Language>("en");
 
   // App State
   const [fields, setFields] = useState<FieldPolygon[]>([]);
@@ -106,8 +108,20 @@ export default function Dashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMounted(true);
     // Load saved theme preference
+    const savedLang = localStorage.getItem('fieldmanager-language') as Language | null;
+    if (savedLang) {
+      setLang(savedLang);
+    } else {
+      // Auto-detect browser language if no preference is saved
+      const browserLang = navigator.language || (navigator.languages && navigator.languages[0]);
+      if (browserLang && browserLang.toLowerCase().startsWith('tr')) {
+        setLang('tr');
+      }
+    }
+
     const savedTheme = localStorage.getItem('fieldmanager-theme') as 'light' | 'dark' | 'system' | null;
     if (savedTheme) {
       setTheme(savedTheme);
@@ -163,7 +177,7 @@ export default function Dashboard() {
     setSelectedFieldId(null);
     setSelectedGroupId(null);
     setFormData({
-      name: `Tarla ${fields.length + 1}`,
+      name: `${t.fieldDefaultName} ${fields.length + 1}`,
       cropType: "",
       plantDate: "",
       harvestDate: "",
@@ -177,7 +191,7 @@ export default function Dashboard() {
       // Create new field
       const newField: FieldPolygon = {
         id: Math.random().toString(36).substr(2, 9),
-        name: formData.name || `Tarla ${fields.length + 1}`,
+        name: formData.name || `${t.fieldDefaultName} ${fields.length + 1}`,
         coordinates: pendingCoordinates,
         cropType: formData.cropType,
         plantDate: formData.plantDate ? new Date(formData.plantDate) : undefined,
@@ -397,7 +411,7 @@ export default function Dashboard() {
         // Basic validation
         if (data && data.fields && Array.isArray(data.fields) && data.groups && Array.isArray(data.groups)) {
           // Parse dates back to Date objects
-          const parsedFields = data.fields.map((f: any) => ({
+          const parsedFields = data.fields.map((f: Record<string, unknown>) => ({
             ...f,
             plantDate: f.plantDate ? new Date(f.plantDate) : undefined,
             harvestDate: f.harvestDate ? new Date(f.harvestDate) : undefined,
@@ -411,13 +425,13 @@ export default function Dashboard() {
             fileInputRef.current.value = '';
           }
 
-          alert('Veriler başarıyla içe aktarıldı.');
+          alert(lang === "en" ? "Data successfully imported." : "Veriler başarıyla içe aktarıldı.");
         } else {
-          alert('Geçersiz dosya formatı. Lütfen doğru bir tarla verisi dosyası seçin.');
+          alert(lang === "en" ? "Invalid file format." : "Geçersiz dosya formatı. Lütfen doğru bir tarla verisi dosyası seçin.");
         }
       } catch (error) {
         console.error('Import error:', error);
-        alert('Dosya okunurken bir hata oluştu veya format bozuk.');
+        alert(lang === "en" ? "Error reading file." : "Dosya okunurken bir hata oluştu veya format bozuk.");
       }
     };
 
@@ -426,6 +440,8 @@ export default function Dashboard() {
 
   // Check if right panel should be open
   const isRightPanelOpen = pendingCoordinates !== null || selectedFieldId !== null || selectedGroupId !== null;
+
+  const t = translations[lang];
 
   return (
     <div className="flex h-screen w-full bg-zinc-50 dark:bg-zinc-950">
@@ -447,7 +463,7 @@ export default function Dashboard() {
             }}
             disabled={isDrawingMode}
           >
-            {isDrawingMode ? "Haritada Çiziliyor..." : "Yeni Tarla Ekle +"}
+            {isDrawingMode ? t.drawingActive : t.addNewGroup.replace(t.groupDefaultName, t.fieldDefaultName) + " +"}
           </Button>
         </div>
 
@@ -455,12 +471,12 @@ export default function Dashboard() {
           <div className="px-6 py-2">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                Tarlalar & Gruplar
+                {t.fieldsAndGroups}
               </h3>
               <button
                 onClick={() => setIsAddingGroup(!isAddingGroup)}
                 className="text-zinc-400 hover:text-emerald-500 transition-colors"
-                title="Yeni Grup Ekle"
+                title={t.addNewGroup}
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -471,18 +487,18 @@ export default function Dashboard() {
                 <Input
                   value={newGroupName}
                   onChange={e => setNewGroupName(e.target.value)}
-                  placeholder="Grup Adı"
+                  placeholder={t.groupName}
                   className="h-8 text-sm"
                   onKeyDown={e => e.key === 'Enter' && handleAddGroup()}
                   autoFocus
                 />
-                <Button size="sm" onClick={handleAddGroup} className="h-8 bg-emerald-600 hover:bg-emerald-700">Ekle</Button>
+                <Button size="sm" onClick={handleAddGroup} className="h-8 bg-emerald-600 hover:bg-emerald-700">{t.addBtn}</Button>
               </div>
             )}
 
             {fields.length === 0 && groups.length === 0 ? (
               <div className="text-sm text-zinc-500 italic py-4 text-center border-2 border-dashed rounded-lg border-zinc-200 dark:border-zinc-800">
-                Henüz tarla veya grup eklenmedi.
+                {t.noFieldsOrGroups}
               </div>
             ) : (
               <ul className="space-y-1">
@@ -549,7 +565,7 @@ export default function Dashboard() {
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDeleteGroup(group.id); }}
                           className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 opacity-0 group-hover/item:opacity-100 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md transition-all"
-                          title="Sil"
+                          title={t.deleteBtn}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -594,7 +610,7 @@ export default function Dashboard() {
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleDeleteField(field.id); }}
                                 className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 opacity-0 group-hover/field:opacity-100 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded transition-all"
-                                title="Sil"
+                                title={t.deleteBtn}
                               >
                                 <Trash2 className="w-3 h-3" />
                               </button>
@@ -604,7 +620,7 @@ export default function Dashboard() {
                       )}
                       {isExpanded && groupFields.length === 0 && (
                         <div className="ml-5 pl-3 border-l-2 border-zinc-200 dark:border-zinc-700 py-2 mb-1">
-                          <p className="text-xs text-zinc-400 italic">Tarla sürükleyerek ekleyin</p>
+                          <p className="text-xs text-zinc-400 italic">{t.dragDropHere}</p>
                         </div>
                       )}
                     </li>
@@ -649,7 +665,7 @@ export default function Dashboard() {
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDeleteField(field.id); }}
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 opacity-0 group-hover/field:opacity-100 text-zinc-400 hover:text-red-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md transition-all"
-                      title="Sil"
+                      title={t.deleteBtn}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -670,19 +686,19 @@ export default function Dashboard() {
           />
           <Button variant="ghost" className="justify-start gap-3 w-full text-zinc-500" onClick={handleExportData}>
             <Download className="w-4 h-4" />
-            <span className="text-sm">Dışa Aktar</span>
+            <span className="text-sm">{t.exportBtn}</span>
           </Button>
           <Button variant="ghost" className="justify-start gap-3 w-full text-zinc-500" onClick={() => fileInputRef.current?.click()}>
             <Upload className="w-4 h-4" />
-            <span className="text-sm">İçe Aktar</span>
+            <span className="text-sm">{t.importBtn}</span>
           </Button>
           <Button variant="ghost" className="justify-start gap-3 w-full text-zinc-500" onClick={() => setIsAboutOpen(true)}>
             <Info className="w-4 h-4" />
-            <span className="text-sm">Hakkında</span>
+            <span className="text-sm">{t.aboutBtn}</span>
           </Button>
           <Button variant="ghost" className="justify-start gap-3 w-full text-zinc-500" onClick={() => setIsSettingsOpen(true)}>
             <Settings className="w-4 h-4" />
-            <span className="text-sm">Ayarlar</span>
+            <span className="text-sm">{t.settingsBtn}</span>
           </Button>
         </div>
       </aside>
@@ -694,9 +710,9 @@ export default function Dashboard() {
             {isDrawingMode ? (
               <span className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full text-sm border border-emerald-200">
                 <Edit2 className="w-4 h-4 animate-pulse" />
-                Haritada Tarla Çizimi Aktif...
+                {t.drawingActive}
               </span>
-            ) : "Harita Görünümü"}
+            ) : t.mapView}
           </h2>
           
           <div className="pointer-events-auto flex items-center gap-3 relative">
@@ -716,7 +732,7 @@ export default function Dashboard() {
                     }
                   }}
                 >
-                  <option value="">Tarla Seçin (Hava Durumu)</option>
+                  <option value="">{t.selectFieldForWeather}</option>
                   {fields.map(f => (
                     <option key={f.id} value={f.id}>{f.name}</option>
                   ))}
@@ -725,7 +741,7 @@ export default function Dashboard() {
                   onClick={() => selectedFieldId && setIsWeatherOpen(!isWeatherOpen)}
                   disabled={!selectedFieldId}
                   className={`p-1.5 rounded-md transition-colors ${isWeatherOpen ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500'} disabled:opacity-50 disabled:cursor-not-allowed`}
-                  title="Hava Durumu"
+                  title={t.weatherTitle}
                 >
                   <CloudRain className="w-4 h-4" />
                 </button>
@@ -739,7 +755,7 @@ export default function Dashboard() {
                   const field = fields.find(f => f.id === selectedFieldId);
                   const center = field ? getPolygonCenter(field.coordinates) : null;
                   if (!center) return null;
-                  return <WeatherDashboard lat={center[0]} lon={center[1]} apiKey={openWeatherApiKey || undefined} />;
+                  return <WeatherDashboard lang={lang} lat={center[0]} lon={center[1]} apiKey={openWeatherApiKey || undefined} />;
                 })()}
               </div>
             )}
@@ -750,6 +766,7 @@ export default function Dashboard() {
         <div className="flex-1 w-full h-full relative z-0 bg-zinc-200 dark:bg-zinc-800">
           {isMounted && (
             <Map
+              lang={lang}
               fields={selectedGroupId === null ? fields : fields.filter(f => f.groupId === selectedGroupId)}
               isDrawingMode={isDrawingMode}
               onPolygonCreated={handlePolygonCreated}
@@ -766,10 +783,10 @@ export default function Dashboard() {
           <div className="h-16 flex items-center justify-between px-6 border-b">
             <h2 className="font-semibold text-zinc-800 dark:text-zinc-100">
               {selectedGroupId !== null && !selectedFieldId && !pendingCoordinates
-                ? "Grup Detayı"
+                ? t.groupDetail
                 : pendingCoordinates
-                  ? "Yeni Tarla Detayı"
-                  : "Tarla Düzenle"}
+                  ? t.newFieldDetail
+                  : t.editField}
             </h2>
             <button
               onClick={() => {
@@ -791,21 +808,21 @@ export default function Dashboard() {
               return (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="groupName">Grup Adı</Label>
+                    <Label htmlFor="groupName">{t.groupName}</Label>
                     <Input
                       id="groupName"
                       value={group?.name || ""}
                       onChange={(e) => group && handleRenameGroup(group.id, e.target.value)}
-                      placeholder="Grup adı girin"
+                      placeholder={t.groupName}
                     />
                   </div>
                   <div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
                     <div>
-                      <div className="text-sm text-zinc-500 mb-1">Toplam Tarla</div>
-                      <div className="font-medium">{groupFields.length} adet</div>
+                      <div className="text-sm text-zinc-500 mb-1">{t.totalFields}</div>
+                      <div className="font-medium">{groupFields.length} {t.itemsCount}</div>
                     </div>
                     <div>
-                      <div className="text-sm text-zinc-500 mb-1">Ekilen Ürünler</div>
+                      <div className="text-sm text-zinc-500 mb-1">{t.plantedCrops}</div>
                       {uniqueCrops.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
                           {uniqueCrops.map(crop => (
@@ -815,7 +832,7 @@ export default function Dashboard() {
                           ))}
                         </div>
                       ) : (
-                        <div className="text-sm text-zinc-400 italic">Ürün bilgisi yok</div>
+                        <div className="text-sm text-zinc-400 italic">{t.noCropInfo}</div>
                       )}
                     </div>
                   </div>
@@ -824,12 +841,12 @@ export default function Dashboard() {
             })() : (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="name">Tarla Adı / Parsel No</Label>
+                  <Label htmlFor="name">{t.fieldName}</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Örn: 145 Ada 2 Parsel"
+                    placeholder={t.fieldNamePlaceholder}
                   />
                 </div>
 
@@ -841,7 +858,7 @@ export default function Dashboard() {
                   const areaDekar = areaM2 / 1000;
                   return (
                     <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/15 border border-emerald-200 dark:border-emerald-800/50 p-4">
-                      <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-3">Tarla Alanı</div>
+                      <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-3">{t.fieldArea}</div>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-white dark:bg-zinc-900/60 rounded-lg p-3 text-center">
                           <div className="text-lg font-bold text-zinc-800 dark:text-zinc-100">
@@ -853,7 +870,7 @@ export default function Dashboard() {
                           <div className="text-lg font-bold text-zinc-800 dark:text-zinc-100">
                             {areaDekar.toFixed(2)}
                           </div>
-                          <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">dekar (dönüm)</div>
+                          <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{t.decares}</div>
                         </div>
                       </div>
                     </div>
@@ -861,14 +878,14 @@ export default function Dashboard() {
                 })()}
 
                 <div className="space-y-2">
-                  <Label htmlFor="groupId">Ait Olduğu Grup</Label>
+                  <Label htmlFor="groupId">{t.groupLabel}</Label>
                   <select
                     id="groupId"
                     value={formData.groupId}
                     onChange={(e) => setFormData({ ...formData, groupId: e.target.value })}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <option value="unassigned">Grupsuz</option>
+                    <option value="unassigned">{t.ungrouped}</option>
                     {groups.map(g => (
                       <option key={g.id} value={g.id}>{g.name}</option>
                     ))}
@@ -876,17 +893,17 @@ export default function Dashboard() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="cropType">Ekili Ürün</Label>
+                  <Label htmlFor="cropType">{t.cropLabel}</Label>
                   <Input
                     id="cropType"
                     value={formData.cropType}
                     onChange={(e) => setFormData({ ...formData, cropType: e.target.value })}
-                    placeholder="Örn: Buğday, Mısır, Ayçiçeği..."
+                    placeholder={t.cropPlaceholder}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="plantDate">Ekim Tarihi</Label>
+                  <Label htmlFor="plantDate">{t.plantDate}</Label>
                   <Input
                     id="plantDate"
                     type="date"
@@ -896,7 +913,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="harvestDate">Tahmini Hasat Tarihi</Label>
+                  <Label htmlFor="harvestDate">{t.harvestDate}</Label>
                   <Input
                     id="harvestDate"
                     type="date"
@@ -908,18 +925,18 @@ export default function Dashboard() {
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1.5">
                     <Palette className="w-3.5 h-3.5" />
-                    Tarla Rengi
+                    {t.fieldColor}
                   </Label>
                   <div className="flex flex-wrap gap-2">
                     {[
-                      { color: '#22c55e', name: 'Yeşil' },
-                      { color: '#ef4444', name: 'Kırmızı' },
-                      { color: '#3b82f6', name: 'Mavi' },
-                      { color: '#f97316', name: 'Turuncu' },
-                      { color: '#8b5cf6', name: 'Mor' },
-                      { color: '#eab308', name: 'Sarı' },
-                      { color: '#ec4899', name: 'Pembe' },
-                      { color: '#06b6d4', name: 'Turkuaz' },
+                      { color: '#22c55e', name: '{t.colorNames.green}' },
+                      { color: '#ef4444', name: '{t.colorNames.red}' },
+                      { color: '#3b82f6', name: '{t.colorNames.blue}' },
+                      { color: '#f97316', name: '{t.colorNames.orange}' },
+                      { color: '#8b5cf6', name: '{t.colorNames.purple}' },
+                      { color: '#eab308', name: '{t.colorNames.yellow}' },
+                      { color: '#ec4899', name: '{t.colorNames.pink}' },
+                      { color: '#06b6d4', name: '{t.colorNames.turquoise}' },
                     ].map(preset => (
                       <button
                         key={preset.color}
@@ -952,14 +969,14 @@ export default function Dashboard() {
                         <Plus className="w-3.5 h-3.5 text-white drop-shadow-sm" />
                       </div>
                     </label>
-                    <span className="text-xs text-zinc-500">Özel renk</span>
+                    <span className="text-xs text-zinc-500">{t.colorCustom}</span>
                     {formData.color && (
                       <button
                         type="button"
                         onClick={() => setFormData({ ...formData, color: '' })}
                         className="ml-auto text-xs text-zinc-400 hover:text-red-500 transition-colors"
                       >
-                        Rengi kaldır
+                        {t.colorRemove}
                       </button>
                     )}
                   </div>
@@ -967,9 +984,9 @@ export default function Dashboard() {
 
                 {pendingCoordinates && (
                   <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                    <div className="text-xs text-zinc-500 mb-2">Koordinat Verisi</div>
+                    <div className="text-xs text-zinc-500 mb-2">{t.coordinateData}</div>
                     <div className="bg-zinc-50 dark:bg-zinc-950 p-2 rounded text-xs font-mono text-zinc-600 line-clamp-3">
-                      {pendingCoordinates.length} köşe noktası çizildi.
+                      {pendingCoordinates.length} {t.pointsDrawn}
                     </div>
                   </div>
                 )}
@@ -994,7 +1011,7 @@ export default function Dashboard() {
                 onClick={handleSaveField}
               >
                 <Save className="w-4 h-4 mr-2" />
-                Kaydet
+                {t.saveBtn}
               </Button>
             </div>
           )}
@@ -1006,10 +1023,10 @@ export default function Dashboard() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Trees className="w-5 h-5 text-emerald-600" />
-              Field Manager Hakkında
+              Field Manager {t.aboutBtn}
             </DialogTitle>
             <DialogDescription>
-              Tarla ve ürün yönetimi için dijital çözüm.
+              {t.aboutDesc}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -1035,21 +1052,43 @@ export default function Dashboard() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Settings className="w-5 h-5 text-emerald-600" />
-              Ayarlar
+              {t.settingsBtn}
             </DialogTitle>
             <DialogDescription>
-              Uygulama ayarlarını buradan yönetebilirsiniz.
+              {t.settingsBtn}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6 py-4">
+            {/* Language Selection */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">{t.language}</Label>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { value: 'en' as const, label: 'English' },
+                  { value: 'tr' as const, label: 'Türkçe' }
+                ].map(option => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => { setLang(option.value); localStorage.setItem("fieldmanager-language", option.value); }}
+                    className={`p-3 rounded-xl border-2 transition-all duration-200 cursor-pointer text-sm font-medium ${lang === option.value
+                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 shadow-sm'
+                      : 'border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
+                      }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             {/* Theme Selection */}
             <div className="space-y-3">
-              <Label className="text-sm font-medium">Tema</Label>
+              <Label className="text-sm font-medium">{t.theme}</Label>
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { value: 'light' as const, label: 'Açık', icon: Sun, description: 'Açık tema' },
-                  { value: 'dark' as const, label: 'Koyu', icon: Moon, description: 'Koyu tema' },
-                  { value: 'system' as const, label: 'Sistem', icon: Monitor, description: 'Sistem teması' },
+                  { value: 'light' as const, label: t.themeLight, icon: Sun },
+                  { value: 'dark' as const, label: t.themeDark, icon: Moon },
+                  { value: 'system' as const, label: t.themeSystem, icon: Monitor },
                 ].map(option => (
                   <button
                     key={option.value}
@@ -1078,16 +1117,16 @@ export default function Dashboard() {
               </div>
               <p className="text-xs text-zinc-400 dark:text-zinc-500">
                 {theme === 'system'
-                  ? 'Tema, işletim sisteminizin ayarına göre otomatik değişir.'
+                  ? t.themeDesc
                   : theme === 'dark'
-                    ? 'Koyu tema aktif. Göz yorgunluğunu azaltır.'
-                    : 'Açık tema aktif.'}
+                    ? lang === 'en' ? 'Dark theme active. Reduces eye strain.' : 'Koyu tema aktif. Göz yorgunluğunu azaltır.'
+                    : lang === 'en' ? 'Light theme active.' : 'Açık tema aktif.'}
               </p>
             </div>
             
             {/* OpenWeather API Key Selection */}
             <div className="space-y-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-              <Label className="text-sm font-medium">OpenWeather API Anahtarı</Label>
+              <Label className="text-sm font-medium">{t.apiKey}</Label>
               <div className="flex gap-2">
                 <Input
                   type="text"
@@ -1108,11 +1147,11 @@ export default function Dashboard() {
                   }}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
                 >
-                  Uygula
+                  {t.applyBtn}
                 </Button>
               </div>
               <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                Hava durumu verisi için gereklidir. Buraya girdiğiniz anahtar, sunucuya tanımlanmış olandan daha önceliklidir. Sadece tarayıcınızda (localStorage) saklanır.
+                {t.apiKeyDesc}
               </p>
             </div>
           </div>
@@ -1130,22 +1169,22 @@ export default function Dashboard() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-emerald-600">
               <Trees className="w-6 h-6" />
-              Field Manager'a Hoş Geldiniz!
+              {t.welcomeTitle}
             </DialogTitle>
             <DialogDescription className="text-sm pt-2">
-              Tarlalarınızı yönetmek ve hava durumunu takip etmek artık çok kolay.
+              {t.welcomeSubtitle}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2 text-sm text-zinc-600 dark:text-zinc-300">
             <p>
-              <strong>Nasıl Kullanılır?</strong>
+              <strong>{t.howToUse}</strong>
               <br/>
-              Harita üzerinden tarlalarınızı çizebilir, ürün bilgilerinizi girebilir ve kendi gruplarınızı oluşturarak tarlalarınızı organize edebilirsiniz.
+              {t.howToUseDesc}
             </p>
             <p>
-              <strong>Hava Durumu Özelliği</strong>
+              <strong>{t.weatherFeature}</strong>
               <br/>
-              Hava durumu özellikleri için bir <strong>OpenWeather API Anahtarı</strong> gereklidir. Sunucuya tanımlanmış bir API anahtarı varsa otomatik kullanılacaktır. Kendi özel anahtarınızı kullanmak isterseniz sol menüdeki <em>Ayarlar</em> bölümünden ekleyebilirsiniz (sizin eklediğiniz anahtar her zaman önceliklidir).
+              {t.weatherDesc}
             </p>
             <Button 
               className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white" 
@@ -1154,7 +1193,7 @@ export default function Dashboard() {
                 localStorage.setItem('fieldmanager-welcomed', 'true');
               }}
             >
-              Başla
+              {t.startBtn}
             </Button>
           </div>
         </DialogContent>

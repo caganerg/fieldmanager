@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
+import { translations, Language } from "@/lib/translations";
+
+interface ForecastItem {
+  dt_txt: string;
+  [key: string]: unknown;
+}
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const lat = searchParams.get("lat");
   const lon = searchParams.get("lon");
   const customApiKey = searchParams.get("apiKey");
+  const langParam = (searchParams.get("lang") as Language) || "en";
+  const t = translations[langParam] || translations.en;
 
   if (!lat || !lon) {
-    return NextResponse.json({ error: "Enlem ve boylam zorunludur." }, { status: 400 });
+    return NextResponse.json({ error: "Latitude and longitude are required." }, { status: 400 });
   }
 
   const API_KEY = customApiKey || process.env.OPENWEATHER_API_KEY;
@@ -15,20 +23,20 @@ export async function GET(request: NextRequest) {
   if (!API_KEY) {
     // API Key yoksa test amaciyla dummy data dondurebiliriz fakat biz hata verdirecegiz.
     return NextResponse.json({ 
-      error: "Hava durumu verisi için API Anahtarı eksik. Lütfen ayarlardan OpenWeather API anahtarınızı girin." 
+      error: t.weatherApiKeyMissing 
     }, { status: 500 });
   }
 
   try {
     const urls = [
-      `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric&lang=tr`,
-      `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric&lang=tr`
+      `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric&lang=${langParam}`,
+      `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric&lang=${langParam}`
     ];
 
     const [currentRes, forecastRes] = await Promise.all(urls.map(url => fetch(url)));
 
     if (!currentRes.ok || !forecastRes.ok) {
-        return NextResponse.json({ error: "Hava durumu verisi alınamadı." }, { status: 502 });
+        return NextResponse.json({ error: t.weatherFetchError }, { status: 502 });
     }
 
     const currentData = await currentRes.json();
@@ -36,15 +44,15 @@ export async function GET(request: NextRequest) {
 
     // forecastData.list contains 3-hour intervals for 5 days.
     // We want to extract one forecast per day (ideally at 12:00 PM, or the first available for that day)
-    const dailyForecasts: any[] = [];
+    const dailyForecasts: ForecastItem[] = [];
     const seenDates = new Set();
 
-    for (const item of forecastData.list) {
+    for (const item of forecastData.list as ForecastItem[]) {
       const date = item.dt_txt.split(" ")[0];
       if (!seenDates.has(date)) {
         seenDates.add(date);
-        const itemsForDate = forecastData.list.filter((i: any) => i.dt_txt.startsWith(date));
-        const targetItem = itemsForDate.find((i: any) => i.dt_txt.includes("12:00:00")) || itemsForDate[0];
+        const itemsForDate = (forecastData.list as ForecastItem[]).filter((i) => i.dt_txt.startsWith(date));
+        const targetItem = itemsForDate.find((i) => i.dt_txt.includes("12:00:00")) || itemsForDate[0];
         dailyForecasts.push(targetItem);
       }
     }
@@ -55,7 +63,7 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error) {
-    console.error("Hava durumu API hatası:", error);
-    return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
+    console.error("Weather API error:", error);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
