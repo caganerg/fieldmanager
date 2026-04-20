@@ -68,7 +68,7 @@ fi
 echo -e "\n${GREEN}>> OpenWeather API Key Setup${NC}"
 read -p "Sunucuya kurmak istiyorsanız hava durumu API anahtarınızı girin (yoksa boş bırakın): " WEATHER_API_KEY
 if [ -n "$WEATHER_API_KEY" ]; then
-  echo "OPENWEATHER_API_KEY=$WEATHER_API_KEY" > .env.local
+  echo "OPENWEATHER_API_KEY=$WEATHER_API_KEY" >> .env.local
   echo -e "${GREEN}>> API Key saved to .env.local${NC}"
 fi
 
@@ -90,7 +90,7 @@ NPM_PATH=$(command -v npm)
 SERVICE_FILE="/etc/systemd/system/fieldmanager.service"
 echo -e "${GREEN}>> Creating systemd service at $SERVICE_FILE...${NC}"
 
-$SUDO bash -c "cat > $SERVICE_FILE" <<EOF
+cat <<EOF | $SUDO tee $SERVICE_FILE > /dev/null
 [Unit]
 Description=Field Manager Next.js App
 After=network.target

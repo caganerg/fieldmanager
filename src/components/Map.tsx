@@ -58,16 +58,16 @@ interface MapProps {
   initialLocation?: LatLng | null;
 }
 
-export default function Map({ 
-  fields = [], 
-  isDrawingMode = false, 
-  onPolygonCreated, 
+export default function Map({
+  fields = [],
+  isDrawingMode = false,
+  onPolygonCreated,
   selectedFieldId = null,
   onFieldClick,
-  initialLocation = null 
+  initialLocation = null
 }: MapProps) {
   const [position] = useState<LatLng | null>(initialLocation);
-  
+
   // Default center: Ankara, Turkey
   const center: [number, number] = [39.925533, 32.866287];
 
@@ -78,46 +78,47 @@ export default function Map({
     if (layer instanceof L.Polygon) {
       const latlngs = layer.getLatLngs()[0] as L.LatLng[];
       const coords: LatLngTuple[] = latlngs.map((ll) => [ll.lat, ll.lng]);
-      
+
       // Remove the visually drawn layer from the FeatureGroup immediately
       // because we will render it natively as a <Polygon> from our state 'fields'.
       layer.remove();
-      
+
       onPolygonCreated(coords);
     }
   };
 
   return (
-    <MapContainer 
-      center={position ? [position.lat, position.lng] : center} 
-      zoom={13} 
-      scrollWheelZoom={true} 
+    <MapContainer
+      center={position ? [position.lat, position.lng] : center}
+      zoom={13}
+      scrollWheelZoom={true}
       className="w-full h-full min-h-[400px] z-0 rounded-xl"
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      
+
       {/* Existing Fields */}
       {fields.map((field) => {
         const harvestColor = getFieldColor(field);
         const isSelected = selectedFieldId === field.id;
         return (
-        <Polygon 
-          key={field.id} 
-          positions={field.coordinates} 
-          pathOptions={{ 
-            color: isSelected ? '#10b981' : harvestColor,
-            weight: isSelected ? 4 : 2,
-            fillColor: isSelected ? '#10b981' : harvestColor,
-            fillOpacity: 0.4
-          }}
-          eventHandlers={{
-            click: () => onFieldClick(field.id)
-          }}
-        />
-      )})}
+          <Polygon
+            key={field.id}
+            positions={field.coordinates}
+            pathOptions={{
+              color: isSelected ? '#10b981' : harvestColor,
+              weight: isSelected ? 4 : 2,
+              fillColor: isSelected ? '#10b981' : harvestColor,
+              fillOpacity: 0.4
+            }}
+            eventHandlers={{
+              click: () => onFieldClick(field.id)
+            }}
+          />
+        )
+      })}
 
       {/* Drawing Mode Editing Group */}
       <FeatureGroup>
@@ -147,7 +148,7 @@ export default function Map({
           }}
         />
       </FeatureGroup>
-      
+
       {/* Hook to programmatically enable drawing tool */}
       <DrawControlHandler isDrawingMode={isDrawingMode} />
 
@@ -167,11 +168,11 @@ function DrawControlHandler({ isDrawingMode }: { isDrawingMode: boolean }) {
         drawPolygonBtn.click();
       }
     } else {
-       // Find the cancel button if we cancel drawing mode externally (not implemented in UI yet but good for robustness)
-       const cancelBtn = document.querySelector('.leaflet-draw-actions a[title="Cancel drawing"]') as HTMLElement;
-       if (cancelBtn) {
-           cancelBtn.click();
-       }
+      // Find the cancel button if we cancel drawing mode externally (not implemented in UI yet but good for robustness)
+      const cancelBtn = document.querySelector('.leaflet-draw-actions a[title="Cancel drawing"]') as HTMLElement;
+      if (cancelBtn) {
+        cancelBtn.click();
+      }
     }
   }, [isDrawingMode, map]);
 

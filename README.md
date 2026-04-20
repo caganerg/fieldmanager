@@ -1,46 +1,32 @@
 # Field Manager
 **Version: 0.2.1**
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Field Manager is a web application that can be easily deployed to Debian-based systems.
 
-## Getting Started
-If you are going to do self-hosting (SystemD and a Debian base are required.):
+## 🚀 Quick Installation (Debian / Ubuntu)
+
+You can easily install and run Field Manager as a background service on any Debian-based system (requires Systemd). The installation script will automatically install Node.js, configure the environment, and set up the systemd service.
+
 ```bash
 curl -sSL https://raw.githubusercontent.com/caganerg/fieldmanager/main/install.sh | bash
 ```
 
-Run the development server:
+**Note:** The script will ask for your OpenWeather API key during installation if you want to set it up.
 
+## 🛠️ Manual Development Setup
+
+If you want to run the project locally for development:
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Run the development server:
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
 ## Development Philosophy
 This project is a product of **Vibe Coding**.
 

@@ -35,10 +35,19 @@ export async function GET(request: NextRequest) {
     const forecastData = await forecastRes.json();
 
     // forecastData.list contains 3-hour intervals for 5 days.
-    // We want to extract one forecast per day (e.g. at 12:00 PM)
-    const dailyForecasts = forecastData.list.filter((item: any) => {
-        return item.dt_txt.includes("12:00:00");
-    });
+    // We want to extract one forecast per day (ideally at 12:00 PM, or the first available for that day)
+    const dailyForecasts: any[] = [];
+    const seenDates = new Set();
+
+    for (const item of forecastData.list) {
+      const date = item.dt_txt.split(" ")[0];
+      if (!seenDates.has(date)) {
+        seenDates.add(date);
+        const itemsForDate = forecastData.list.filter((i: any) => i.dt_txt.startsWith(date));
+        const targetItem = itemsForDate.find((i: any) => i.dt_txt.includes("12:00:00")) || itemsForDate[0];
+        dailyForecasts.push(targetItem);
+      }
+    }
 
     return NextResponse.json({
         current: currentData,

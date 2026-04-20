@@ -177,7 +177,7 @@ export default function Dashboard() {
       // Create new field
       const newField: FieldPolygon = {
         id: Math.random().toString(36).substr(2, 9),
-        name: formData.name || `Tarlam ${fields.length + 1}`,
+        name: formData.name || `Tarla ${fields.length + 1}`,
         coordinates: pendingCoordinates,
         cropType: formData.cropType,
         plantDate: formData.plantDate ? new Date(formData.plantDate) : undefined,
@@ -216,8 +216,8 @@ export default function Dashboard() {
       setFormData({
         name: field.name,
         cropType: field.cropType || "",
-        plantDate: field.plantDate ? new Date(field.plantDate.getTime() - field.plantDate.getTimezoneOffset() * 60000).toISOString().split('T')[0] : "",
-        harvestDate: field.harvestDate ? new Date(field.harvestDate.getTime() - field.harvestDate.getTimezoneOffset() * 60000).toISOString().split('T')[0] : "",
+        plantDate: field.plantDate ? field.plantDate.toISOString().split('T')[0] : "",
+        harvestDate: field.harvestDate ? field.harvestDate.toISOString().split('T')[0] : "",
         groupId: field.groupId || "unassigned",
         color: field.color || ""
       });

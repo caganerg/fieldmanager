@@ -18,8 +18,8 @@ import {
 } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((res) => {
-    if (!res.ok) throw new Error("API Hatası");
-    return res.json();
+  if (!res.ok) throw new Error("API Hatası");
+  return res.json();
 });
 
 function getWeatherIcon(iconCode: string, className = "w-6 h-6") {
@@ -64,9 +64,9 @@ export default function WeatherDashboard({ lat, lon, apiKey }: WeatherDashboardP
           <div className="h-8 bg-zinc-200 dark:bg-zinc-800 rounded w-1/4"></div>
         </div>
         <div className="grid grid-cols-3 gap-2">
-            <div className="h-10 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
-            <div className="h-10 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
-            <div className="h-10 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
+          <div className="h-10 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
+          <div className="h-10 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
+          <div className="h-10 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
         </div>
       </div>
     );
@@ -85,7 +85,7 @@ export default function WeatherDashboard({ lat, lon, apiKey }: WeatherDashboardP
   }
 
   const { current, forecast } = data;
-  
+
   if (!current) return null;
 
   return (
@@ -106,7 +106,7 @@ export default function WeatherDashboard({ lat, lon, apiKey }: WeatherDashboardP
             </div>
           </div>
         </div>
-        
+
         <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
           <div className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400">
             <Droplets className="w-3.5 h-3.5 text-blue-500" />
