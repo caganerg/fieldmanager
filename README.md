@@ -27,20 +27,21 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
 ## Development Philosophy
 This project is a product of **Vibe Coding**.
 
 ## License
 
-This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**. 
+This project is licensed under the **MIT License**.
 
 You are free to:
-* **Share** — copy and redistribute the material in any medium or format.
-* **Adapt** — remix, transform, and build upon the material.
+* **Use** — Use the code for private, commercial, or institutional purposes.
+* **Modify** — Make changes, adapt, and build upon the software.
+* **Distribute** — Copy, share, and redistribute the original or modified version.
+* **Sublicense** — Include the code in proprietary or closed-source applications.
 
-Under the following terms:
-* **Attribution** — You must give appropriate credit, provide a link to the license, and indicate if changes were made.
-* **Network Interaction** — If you modify the Program, your modified version must prominently offer all users interacting with it remotely through a computer network an opportunity to receive the Corresponding Source of your version.
-* **ShareAlike** — If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original.
+Under the following condition:
+* **Attribution** — You must include the original copyright notice and license text in all copies or substantial portions of the Software.
 
 For more details, please see the [LICENSE](LICENSE) file included in this repository.
