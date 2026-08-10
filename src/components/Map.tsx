@@ -171,12 +171,19 @@ function DrawControlHandler({ isDrawingMode }: { isDrawingMode: boolean }) {
       if (drawPolygonBtn) {
         drawPolygonBtn.click();
       }
-    } else {
-      // Find the cancel button if we cancel drawing mode externally (not implemented in UI yet but good for robustness)
-      const cancelBtn = document.querySelector('.leaflet-draw-actions a[title="Cancel drawing"]') as HTMLElement;
-      if (cancelBtn) {
-        cancelBtn.click();
-      }
+    } else if (!isDrawingMode && map) {
+      // Find and click the cancel button if present in the DOM
+      const cancelBtns = document.querySelectorAll('.leaflet-draw-actions a');
+      cancelBtns.forEach((btn) => {
+        const title = btn.getAttribute('title')?.toLowerCase() || '';
+        const text = btn.textContent?.toLowerCase() || '';
+        if (title.includes('cancel') || text.includes('cancel') || text.includes('iptal') || title.includes('iptal')) {
+          (btn as HTMLElement).click();
+        }
+      });
+
+      // Dispatch Escape key event to ensure Leaflet.Draw polygon handler cleans up any active drawing guides
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true }));
     }
   }, [isDrawingMode, map]);
 

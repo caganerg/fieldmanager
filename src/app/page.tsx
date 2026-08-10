@@ -453,18 +453,32 @@ export default function Dashboard() {
         </div>
 
         <div className="px-6 mb-4">
-          <Button
-            variant="default"
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-            onClick={() => {
-              setIsDrawingMode(true);
-              setSelectedFieldId(null);
-              setPendingCoordinates(null);
-            }}
-            disabled={isDrawingMode}
-          >
-            {isDrawingMode ? t.drawingActive : t.addNewGroup.replace(t.groupDefaultName, t.fieldDefaultName) + " +"}
-          </Button>
+          {isDrawingMode ? (
+            <Button
+              variant="destructive"
+              className="w-full bg-rose-600 hover:bg-rose-700 text-white shadow-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              onClick={() => {
+                setIsDrawingMode(false);
+                setPendingCoordinates(null);
+              }}
+            >
+              <X className="w-4 h-4" />
+              {t.cancelDrawing}
+            </Button>
+          ) : (
+            <Button
+              variant="default"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              onClick={() => {
+                setIsDrawingMode(true);
+                setSelectedFieldId(null);
+                setPendingCoordinates(null);
+              }}
+            >
+              <Plus className="w-4 h-4" />
+              {t.addNewField}
+            </Button>
+          )}
         </div>
 
         <nav className="flex flex-col flex-1 overflow-y-auto">
@@ -708,10 +722,22 @@ export default function Dashboard() {
         <header className="h-16 border-b bg-white/80 backdrop-blur-md dark:bg-zinc-900/80 flex items-center justify-between px-6 shadow-sm absolute top-0 w-full z-10 pointer-events-none">
           <h2 className="text-lg font-semibold text-zinc-800 dark:text-zinc-100 pointer-events-auto">
             {isDrawingMode ? (
-              <span className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full text-sm border border-emerald-200">
-                <Edit2 className="w-4 h-4 animate-pulse" />
-                {t.drawingActive}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-3 py-1 rounded-full text-sm border border-emerald-200 dark:border-emerald-800 font-medium">
+                  <Edit2 className="w-4 h-4 animate-pulse" />
+                  {t.drawingActive}
+                </span>
+                <button
+                  onClick={() => {
+                    setIsDrawingMode(false);
+                    setPendingCoordinates(null);
+                  }}
+                  className="flex items-center gap-1 text-xs font-medium text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/50 px-2.5 py-1 rounded-full border border-rose-200 dark:border-rose-800 transition-colors shadow-xs cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  {t.cancelDrawing}
+                </button>
+              </div>
             ) : t.mapView}
           </h2>
           

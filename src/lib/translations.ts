@@ -20,6 +20,9 @@ export const translations = {
     dragDropHere: "Drag and drop fields here",
     deleteBtn: "Delete",
     saveBtn: "Save",
+    cancelBtn: "Cancel",
+    addNewField: "Add New Field",
+    cancelDrawing: "Cancel Drawing",
     
     exportBtn: "Export",
     importBtn: "Import",
@@ -41,7 +44,7 @@ export const translations = {
     licenseDesc: "Licensed under the MIT License",
     noWarranty: "This program comes with ABSOLUTELY NO WARRANTY.",
     versionLabel: "Version",
-    contributorsLabel: "Field Manager Contributors",
+    contributorsLabel: "Çağan ERGÜN",
     
     groupDetail: "Group Detail",
     newFieldDetail: "New Field Detail",
@@ -116,6 +119,9 @@ export const translations = {
     dragDropHere: "Tarla sürükleyerek ekleyin",
     deleteBtn: "Sil",
     saveBtn: "Kaydet",
+    cancelBtn: "İptal",
+    addNewField: "Yeni Tarla Ekle",
+    cancelDrawing: "Çizimi İptal Et",
     
     exportBtn: "Dışa Aktar",
     importBtn: "İçe Aktar",
@@ -137,7 +143,7 @@ export const translations = {
     licenseDesc: "MIT Lisansı kapsamında lisanslanmıştır",
     noWarranty: "Bu program KESİNLİKLE HİÇBİR GARANTİ İÇERMEZ.",
     versionLabel: "Sürüm",
-    contributorsLabel: "Field Manager Katkıda Bulunanları",
+    contributorsLabel: "Çağan ERGÜN",
     
     groupDetail: "Grup Detayı",
     newFieldDetail: "Yeni Tarla Detayı",
