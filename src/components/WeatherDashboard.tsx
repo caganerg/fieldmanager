@@ -130,7 +130,7 @@ export default function WeatherDashboard({ lat, lon, apiKey, lang = "en" }: Weat
       <div className="p-4 bg-zinc-50 dark:bg-zinc-950/50">
         <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">{t.weatherForecast}</div>
         <div className="flex justify-between items-center gap-1">
-          {forecast?.slice(0, 5).map((day: { dt: number; weather: { icon: string }[]; main: { temp_min: number; temp_max: number }; pop?: number }, i: number) => {
+          {forecast?.slice(0, 5).map((day: { dt: number; weather: { icon: string }[]; main: { temp: number; temp_min?: number; temp_max?: number }; pop?: number }, i: number) => {
             const date = new Date(day.dt * 1000);
             const isToday = i === 0;
             return (

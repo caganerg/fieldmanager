@@ -1,10 +1,10 @@
 # Field Manager
 **Version: 0.2.1**
-Field Manager is a web application that can be easily deployed to Debian-based systems.
+Field Manager is a modern web application for managing fields, crops, and agricultural lands.
 
-## 🚀 Quick Installation (Debian / Ubuntu)
+## 🚀 Quick Installation
 
-You can easily install and run Field Manager as a background service on any Debian-based system (requires Systemd). The installation script will automatically install Node.js, configure the environment, and set up the systemd service.
+You can easily install and run Field Manager as a background service managed via PM2. The installation script will automatically check/install dependencies, PM2, configure the environment, and set up the background service.
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/caganerg/fieldmanager/main/install.sh | bash

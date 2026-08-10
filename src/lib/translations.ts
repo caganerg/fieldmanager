@@ -36,6 +36,12 @@ export const translations = {
     
     aboutTitle: "About Field Manager",
     aboutDesc: "Digital solution for field and crop management.",
+    aboutBody: "Field Manager is an application that allows farmers and agricultural businesses to easily manage their fields and lands on an interactive map.",
+    licenseLabel: "License",
+    licenseDesc: "Licensed under the MIT License",
+    noWarranty: "This program comes with ABSOLUTELY NO WARRANTY.",
+    versionLabel: "Version",
+    contributorsLabel: "Field Manager Contributors",
     
     groupDetail: "Group Detail",
     newFieldDetail: "New Field Detail",
@@ -126,6 +132,12 @@ export const translations = {
     
     aboutTitle: "Field Manager Hakkında",
     aboutDesc: "Tarla ve ürün yönetimi için dijital çözüm.",
+    aboutBody: "Field Manager, çiftçilerin ve tarım işletmelerinin arazilerini harita üzerinden kolayca yönetmelerini sağlayan bir uygulamadır.",
+    licenseLabel: "Lisans",
+    licenseDesc: "MIT Lisansı kapsamında lisanslanmıştır",
+    noWarranty: "Bu program KESİNLİKLE HİÇBİR GARANTİ İÇERMEZ.",
+    versionLabel: "Sürüm",
+    contributorsLabel: "Field Manager Katkıda Bulunanları",
     
     groupDetail: "Grup Detayı",
     newFieldDetail: "Yeni Tarla Detayı",

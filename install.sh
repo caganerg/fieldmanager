@@ -2,7 +2,7 @@
 
 # ==========================================
 # Field Manager - Next.js Auto Setup Script
-# Debian / Ubuntu Systems
+# Linux Systems (PM2 Process Manager)
 # ==========================================
 
 set -e # Exit immediately if a command exits with a non-zero status
@@ -28,20 +28,38 @@ fi
 
 # 1. Check & Install Dependencies
 echo -e "\n${GREEN}[1/4] Checking system dependencies...${NC}"
-$SUDO apt-get update -y
-$SUDO apt-get install -y curl git ufw
+if command -v apt-get > /dev/null; then
+  $SUDO apt-get update -y
+  $SUDO apt-get install -y curl git
+elif command -v pacman > /dev/null; then
+  $SUDO pacman -Sy --needed --noconfirm curl git
+elif command -v dnf > /dev/null; then
+  $SUDO dnf install -y curl git
+fi
 
 if ! command -v node > /dev/null; then
-  echo -e "${YELLOW}>> Node.js not found. Installing Node.js 20.x...${NC}"
-  curl -fsSL https://deb.nodesource.com/setup_20.x | $SUDO bash -
-  $SUDO apt-get install -y nodejs
+  echo -e "${YELLOW}>> Node.js not found. Installing Node.js...${NC}"
+  if command -v apt-get > /dev/null; then
+    curl -fsSL https://deb.nodesource.com/setup_20.x | $SUDO bash -
+    $SUDO apt-get install -y nodejs
+  elif command -v pacman > /dev/null; then
+    $SUDO pacman -S --needed --noconfirm nodejs
+  elif command -v dnf > /dev/null; then
+    $SUDO dnf install -y nodejs
+  fi
 else
   echo -e "${GREEN}>> Node.js is already installed: $(node -v)${NC}"
 fi
 
 if ! command -v npm > /dev/null; then
   echo -e "${YELLOW}>> npm not found. Installing npm...${NC}"
-  $SUDO apt-get install -y npm
+  if command -v apt-get > /dev/null; then
+    $SUDO apt-get install -y npm
+  elif command -v pacman > /dev/null; then
+    $SUDO pacman -S --needed --noconfirm npm
+  elif command -v dnf > /dev/null; then
+    $SUDO dnf install -y npm
+  fi
 else
   echo -e "${GREEN}>> npm is already installed: $(npm -v)${NC}"
 fi
@@ -77,47 +95,40 @@ echo -e "\n${GREEN}[3/4] Installing NPM dependencies and building the applicatio
 npm install
 npm run build
 
-# 4. Process Management (Systemd)
-echo -e "\n${GREEN}[4/4] Setting up Systemd for background process management...${NC}"
+# 4. Process Management (PM2)
+echo -e "\n${GREEN}[4/4] Setting up PM2 for background process management...${NC}"
 
-# Stop and disable if exists
-$SUDO systemctl stop fieldmanager 2>/dev/null || true
-$SUDO systemctl disable fieldmanager 2>/dev/null || true
+if ! command -v pm2 > /dev/null; then
+  echo -e "${YELLOW}>> PM2 not found. Installing PM2 globally...${NC}"
+  $SUDO npm install -g pm2
+else
+  echo -e "${GREEN}>> PM2 is already installed: $(pm2 -v)${NC}"
+fi
 
-# Find npm path
-NPM_PATH=$(command -v npm)
+# Stop and delete old instance if exists
+pm2 delete fieldmanager 2>/dev/null || true
 
-SERVICE_FILE="/etc/systemd/system/fieldmanager.service"
-echo -e "${GREEN}>> Creating systemd service at $SERVICE_FILE...${NC}"
+# Start app with PM2
+cd "$PROJECT_DIR"
+pm2 start npm --name "fieldmanager" -- start
 
-cat <<EOF | $SUDO tee $SERVICE_FILE > /dev/null
-[Unit]
-Description=Field Manager Next.js App
-After=network.target
+# Save PM2 process list
+pm2 save
 
-[Service]
-Type=simple
-User=$USER
-WorkingDirectory=$PROJECT_DIR
-ExecStart=$NPM_PATH run start
-Restart=on-failure
-Environment=NODE_ENV=production
-Environment=PORT=3000
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-$SUDO systemctl daemon-reload
-$SUDO systemctl enable fieldmanager
-$SUDO systemctl start fieldmanager
+# Setup PM2 startup script on system boot
+STARTUP_CMD=$(pm2 startup | grep -E "sudo env PATH=" || true)
+if [ -n "$STARTUP_CMD" ]; then
+  eval "$STARTUP_CMD" || true
+fi
 
 echo -e "\n${BLUE}==========================================${NC}"
 echo -e "${GREEN}  Installation Complete! 🚀 ${NC}"
 echo -e "${BLUE}==========================================${NC}"
-echo -e "${GREEN}Your Next.js app 'Field Manager' is now running in the background via systemd.${NC}"
-echo -e "You can check the status with: ${YELLOW}sudo systemctl status fieldmanager${NC}"
-echo -e "You can view logs with:        ${YELLOW}sudo journalctl -ur fieldmanager${NC}"
+echo -e "${GREEN}Your Next.js app 'Field Manager' is now running in the background via PM2.${NC}"
+echo -e "You can check the status with: ${YELLOW}pm2 status${NC} or ${YELLOW}pm2 show fieldmanager${NC}"
+echo -e "You can view logs with:        ${YELLOW}pm2 logs fieldmanager${NC}"
+echo -e "You can restart with:          ${YELLOW}pm2 restart fieldmanager${NC}"
 echo -e "The app is running on port:    ${YELLOW}3000${NC} (default)"
 echo -e "\n${YELLOW}Note: If you have a firewall enabled, don't forget to allow the port:${NC}"
 echo -e "sudo ufw allow 3000/tcp\n"
+

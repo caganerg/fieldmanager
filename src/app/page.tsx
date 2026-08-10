@@ -411,11 +411,11 @@ export default function Dashboard() {
         // Basic validation
         if (data && data.fields && Array.isArray(data.fields) && data.groups && Array.isArray(data.groups)) {
           // Parse dates back to Date objects
-          const parsedFields = data.fields.map((f: Record<string, unknown>) => ({
+          const parsedFields = (data.fields as Array<Record<string, unknown>>).map((f) => ({
             ...f,
-            plantDate: f.plantDate ? new Date(f.plantDate) : undefined,
-            harvestDate: f.harvestDate ? new Date(f.harvestDate) : undefined,
-          }));
+            plantDate: f.plantDate ? new Date(f.plantDate as string | number | Date) : undefined,
+            harvestDate: f.harvestDate ? new Date(f.harvestDate as string | number | Date) : undefined,
+          })) as FieldPolygon[];
 
           setFields(parsedFields);
           setGroups(data.groups);
@@ -1023,7 +1023,7 @@ export default function Dashboard() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Trees className="w-5 h-5 text-emerald-600" />
-              Field Manager {t.aboutBtn}
+              {t.aboutTitle}
             </DialogTitle>
             <DialogDescription>
               {t.aboutDesc}
@@ -1031,17 +1031,17 @@ export default function Dashboard() {
           </DialogHeader>
           <div className="space-y-4 py-2">
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Field Manager, çiftçilerin ve tarım işletmelerinin arazilerini harita üzerinden kolayca yönetmelerini sağlayan bir uygulamadır.
+              {t.aboutBody}
             </p>
             <div className="space-y-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-              <h4 className="text-xs font-semibold text-zinc-500 uppercase">Lisans</h4>
+              <h4 className="text-xs font-semibold text-zinc-500 uppercase">{t.licenseLabel}</h4>
               <p className="text-xs text-zinc-500">
-                Licensed under GNU Affero General Public License v3.0 (AGPL-3.0)<br />
-                This program comes with ABSOLUTELY NO WARRANTY.
+                {t.licenseDesc}<br />
+                {t.noWarranty}
               </p>
             </div>
             <div className="pt-4 border-t text-xs text-zinc-400 text-center">
-              Version 0.2.1 &bull; &copy; 2026 Field Manager Contributors
+              {t.versionLabel} 0.2.1 &bull; &copy; 2026 {t.contributorsLabel}
             </div>
           </div>
         </DialogContent>
@@ -1130,7 +1130,7 @@ export default function Dashboard() {
               <div className="flex gap-2">
                 <Input
                   type="text"
-                  placeholder="Örn: 1a2b3c4d5e..."
+                  placeholder={lang === 'en' ? "e.g., 1a2b3c4d5e..." : "Örn: 1a2b3c4d5e..."}
                   value={apiKeyInput}
                   onChange={(e) => setApiKeyInput(e.target.value)}
                   onKeyDown={(e) => {
