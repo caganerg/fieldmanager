@@ -16,6 +16,7 @@ import {
   CloudFog,
   AlertCircle
 } from "lucide-react";
+import { t } from "@/lib/translations";
 
 const fetcher = (url: string) => fetch(url).then((res) => {
   if (!res.ok) throw new Error("API Error");
@@ -52,11 +53,8 @@ interface WeatherDashboardProps {
   apiKey?: string;
 }
 
-import { translations, Language } from "@/lib/translations";
-
-export default function WeatherDashboard({ lat, lon, apiKey, lang = "en" }: WeatherDashboardProps & { lang?: Language }) {
-  const t = translations[lang];
-  const { data, error, isLoading } = useSWR(`/api/weather?lat=${lat}&lon=${lon}&lang=${lang}${apiKey ? `&apiKey=${apiKey}` : ''}`, fetcher);
+export default function WeatherDashboard({ lat, lon, apiKey }: WeatherDashboardProps) {
+  const { data, error, isLoading } = useSWR(`/api/weather?lat=${lat}&lon=${lon}${apiKey ? `&apiKey=${apiKey}` : ''}`, fetcher);
 
   if (isLoading) {
     return (
@@ -115,7 +113,7 @@ export default function WeatherDashboard({ lat, lon, apiKey, lang = "en" }: Weat
             <Droplets className="w-3.5 h-3.5 text-blue-500" />
             <span className="font-medium">{current.main.humidity}%</span>
           </div>
-          <div className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400 cursor-help" title="{t.weatherRainCloud}">
+          <div className="flex items-center gap-1.5 text-zinc-600 dark:text-zinc-400 cursor-help" title={t.weatherRainCloud}>
             <CloudRain className="w-3.5 h-3.5 text-blue-400" />
             <span className="font-medium">{current.clouds?.all || 0}%</span>
           </div>
@@ -136,7 +134,7 @@ export default function WeatherDashboard({ lat, lon, apiKey, lang = "en" }: Weat
             return (
               <div key={day.dt} className="flex flex-col items-center gap-1.5 flex-1 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 p-1.5 rounded-lg transition-colors">
                 <span className={`text-[10px] font-semibold uppercase ${isToday ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500"}`}>
-                  {isToday ? t.weatherToday : new Intl.DateTimeFormat(lang === "en" ? "en-US" : "tr-TR", { weekday: 'short' }).format(date)}
+                  {isToday ? t.weatherToday : new Intl.DateTimeFormat("en-US", { weekday: 'short' }).format(date)}
                 </span>
                 {getWeatherIcon(day.weather[0].icon, "w-5 h-5")}
                 <div className="text-sm font-bold text-zinc-800 dark:text-zinc-200">

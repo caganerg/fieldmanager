@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { translations, Language } from "@/lib/translations";
 
 interface ForecastItem {
   dt_txt: string;
@@ -11,8 +10,6 @@ export async function GET(request: NextRequest) {
   const lat = searchParams.get("lat");
   const lon = searchParams.get("lon");
   const customApiKey = searchParams.get("apiKey");
-  const langParam = (searchParams.get("lang") as Language) || "en";
-  const t = translations[langParam] || translations.en;
 
   if (!lat || !lon) {
     return NextResponse.json({ error: "Latitude and longitude are required." }, { status: 400 });
@@ -21,22 +18,21 @@ export async function GET(request: NextRequest) {
   const API_KEY = customApiKey || process.env.OPENWEATHER_API_KEY;
 
   if (!API_KEY) {
-    // API Key yoksa test amaciyla dummy data dondurebiliriz fakat biz hata verdirecegiz.
     return NextResponse.json({ 
-      error: t.weatherApiKeyMissing 
+      error: "API Key missing. Please enter your OpenWeather API key in settings." 
     }, { status: 500 });
   }
 
   try {
     const urls = [
-      `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric&lang=${langParam}`,
-      `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric&lang=${langParam}`
+      `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric&lang=en`,
+      `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric&lang=en`
     ];
 
     const [currentRes, forecastRes] = await Promise.all(urls.map(url => fetch(url)));
 
     if (!currentRes.ok || !forecastRes.ok) {
-        return NextResponse.json({ error: t.weatherFetchError }, { status: 502 });
+      return NextResponse.json({ error: "Could not fetch weather data." }, { status: 502 });
     }
 
     const currentData = await currentRes.json();
@@ -58,8 +54,8 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-        current: currentData,
-        forecast: dailyForecasts
+      current: currentData,
+      forecast: dailyForecasts
     });
     
   } catch (error) {

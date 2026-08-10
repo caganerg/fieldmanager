@@ -20,7 +20,7 @@ const defaultIcon = L.icon({
 
 L.Marker.prototype.options.icon = defaultIcon;
 
-import { translations, Language } from "@/lib/translations";
+import { t } from "@/lib/translations";
 
 export interface FieldPolygon {
   id: string;
@@ -52,7 +52,6 @@ function getFieldColor(field: FieldPolygon): string {
 }
 
 interface MapProps {
-  lang?: Language;
   fields: FieldPolygon[];
   isDrawingMode: boolean;
   onPolygonCreated: (coordinates: LatLngTuple[]) => void;
@@ -62,7 +61,6 @@ interface MapProps {
 }
 
 export default function Map({
-  lang = "en",
   fields = [],
   isDrawingMode = false,
   onPolygonCreated,
@@ -139,7 +137,7 @@ export default function Map({
               allowIntersection: false,
               drawError: {
                 color: '#e1e100', // Color the shape will turn when intersects
-                message: `<strong>${translations[lang].mapIntersectError}</strong>` // Message that will show when intersect
+                message: `<strong>${t.mapIntersectError}</strong>` // Message that will show when intersect
               },
               shapeOptions: {
                 color: '#10b981'

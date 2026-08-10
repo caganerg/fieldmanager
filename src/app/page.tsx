@@ -17,7 +17,8 @@ import { Label } from "@/components/ui/label";
 import { type FieldPolygon } from "@/components/Map";
 import type { LatLngTuple } from "leaflet";
 import WeatherDashboard from "@/components/WeatherDashboard";
-import { translations, Language } from "@/lib/translations";
+import FeaturesMenu from "@/components/FeaturesMenu";
+import { t } from "@/lib/translations";
 
 // Dynamically import Map with SSR disabled since Leaflet requires window/document
 const Map = dynamic(() => import("@/components/Map"), {
@@ -65,7 +66,6 @@ function calculatePolygonArea(coordinates: LatLngTuple[]): number {
 
 export default function Dashboard() {
   const [isMounted, setIsMounted] = useState(false);
-  const [lang, setLang] = useState<Language>("en");
 
   // App State
   const [fields, setFields] = useState<FieldPolygon[]>([]);
@@ -110,18 +110,6 @@ export default function Dashboard() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMounted(true);
-    // Load saved theme preference
-    const savedLang = localStorage.getItem('fieldmanager-language') as Language | null;
-    if (savedLang) {
-      setLang(savedLang);
-    } else {
-      // Auto-detect browser language if no preference is saved
-      const browserLang = navigator.language || (navigator.languages && navigator.languages[0]);
-      if (browserLang && browserLang.toLowerCase().startsWith('tr')) {
-        setLang('tr');
-      }
-    }
-
     const savedTheme = localStorage.getItem('fieldmanager-theme') as 'light' | 'dark' | 'system' | null;
     if (savedTheme) {
       setTheme(savedTheme);
@@ -425,13 +413,13 @@ export default function Dashboard() {
             fileInputRef.current.value = '';
           }
 
-          alert(lang === "en" ? "Data successfully imported." : "Veriler başarıyla içe aktarıldı.");
+          alert("Data successfully imported.");
         } else {
-          alert(lang === "en" ? "Invalid file format." : "Geçersiz dosya formatı. Lütfen doğru bir tarla verisi dosyası seçin.");
+          alert("Invalid file format. Please select a valid field data file.");
         }
       } catch (error) {
         console.error('Import error:', error);
-        alert(lang === "en" ? "Error reading file." : "Dosya okunurken bir hata oluştu veya format bozuk.");
+        alert("Error reading file or corrupted file format.");
       }
     };
 
@@ -440,8 +428,6 @@ export default function Dashboard() {
 
   // Check if right panel should be open
   const isRightPanelOpen = pendingCoordinates !== null || selectedFieldId !== null || selectedGroupId !== null;
-
-  const t = translations[lang];
 
   return (
     <div className="flex h-screen w-full bg-zinc-50 dark:bg-zinc-950">
@@ -742,6 +728,20 @@ export default function Dashboard() {
           </h2>
           
           <div className="pointer-events-auto flex items-center gap-3 relative">
+            {/* Agricultural Features & Modules Dropdown */}
+            <FeaturesMenu
+              fields={fields}
+              selectedFieldId={selectedFieldId}
+              onOpenWeather={() => {
+                if (selectedFieldId) {
+                  setIsWeatherOpen(true);
+                } else if (fields.length > 0) {
+                  handleFieldSelect(fields[0].id);
+                  setIsWeatherOpen(true);
+                }
+              }}
+            />
+
             {fields.length > 0 && (
               <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-1 shadow-sm">
                 <select 
@@ -781,7 +781,7 @@ export default function Dashboard() {
                   const field = fields.find(f => f.id === selectedFieldId);
                   const center = field ? getPolygonCenter(field.coordinates) : null;
                   if (!center) return null;
-                  return <WeatherDashboard lang={lang} lat={center[0]} lon={center[1]} apiKey={openWeatherApiKey || undefined} />;
+                  return <WeatherDashboard lat={center[0]} lon={center[1]} apiKey={openWeatherApiKey || undefined} />;
                 })()}
               </div>
             )}
@@ -792,7 +792,6 @@ export default function Dashboard() {
         <div className="flex-1 w-full h-full relative z-0 bg-zinc-200 dark:bg-zinc-800">
           {isMounted && (
             <Map
-              lang={lang}
               fields={selectedGroupId === null ? fields : fields.filter(f => f.groupId === selectedGroupId)}
               isDrawingMode={isDrawingMode}
               onPolygonCreated={handlePolygonCreated}
@@ -1029,7 +1028,7 @@ export default function Dashboard() {
                   className="flex-1"
                   onClick={() => selectedFieldId && handleDeleteField(selectedFieldId)}
                 >
-                  Sil
+                  {t.deleteBtn}
                 </Button>
               )}
               <Button
@@ -1085,28 +1084,6 @@ export default function Dashboard() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6 py-4">
-            {/* Language Selection */}
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">{t.language}</Label>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { value: 'en' as const, label: 'English' },
-                  { value: 'tr' as const, label: 'Türkçe' }
-                ].map(option => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => { setLang(option.value); localStorage.setItem("fieldmanager-language", option.value); }}
-                    className={`p-3 rounded-xl border-2 transition-all duration-200 cursor-pointer text-sm font-medium ${lang === option.value
-                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 shadow-sm'
-                      : 'border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
-                      }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
             {/* Theme Selection */}
             <div className="space-y-3">
               <Label className="text-sm font-medium">{t.theme}</Label>
@@ -1145,8 +1122,8 @@ export default function Dashboard() {
                 {theme === 'system'
                   ? t.themeDesc
                   : theme === 'dark'
-                    ? lang === 'en' ? 'Dark theme active. Reduces eye strain.' : 'Koyu tema aktif. Göz yorgunluğunu azaltır.'
-                    : lang === 'en' ? 'Light theme active.' : 'Açık tema aktif.'}
+                    ? t.themeDarkActive
+                    : t.themeLightActive}
               </p>
             </div>
             
@@ -1156,7 +1133,7 @@ export default function Dashboard() {
               <div className="flex gap-2">
                 <Input
                   type="text"
-                  placeholder={lang === 'en' ? "e.g., 1a2b3c4d5e..." : "Örn: 1a2b3c4d5e..."}
+                  placeholder={t.apiKeyPlaceholder}
                   value={apiKeyInput}
                   onChange={(e) => setApiKeyInput(e.target.value)}
                   onKeyDown={(e) => {
