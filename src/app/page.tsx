@@ -18,6 +18,7 @@ import { type FieldPolygon } from "@/components/Map";
 import type { LatLngTuple } from "leaflet";
 import WeatherDashboard from "@/components/WeatherDashboard";
 import FeaturesMenu from "@/components/FeaturesMenu";
+import UsersMenu from "@/components/UsersMenu";
 import { t } from "@/lib/translations";
 
 // Dynamically import Map with SSR disabled since Leaflet requires window/document
@@ -773,6 +774,9 @@ export default function Dashboard() {
                 </button>
               </div>
             )}
+            
+            {/* Users & Team Management Panel */}
+            <UsersMenu fields={fields} />
             
             {/* Weather Dashboard Popover */}
             {isWeatherOpen && selectedFieldId && (

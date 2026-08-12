@@ -98,7 +98,7 @@ export const t = {
   fieldDefaultName: "Field",
   groupDefaultName: "Group",
   
-  featuresBtn: "Features",
+  featuresBtn: "Tools",
   featuresTitle: "Agricultural Tools & Modules",
   featuresDesc: "Smart management, planning, and tracking tools for your fields.",
   comingSoon: "Coming Soon",
@@ -121,6 +121,28 @@ export const t = {
   
   featureModalTitle: "Module Detail",
   featureModalPlaceholder: "This feature module is prepared and ready for integration. You can connect your custom logic and data here.",
+
+  // Users & Team Management
+  usersBtn: "Users",
+  usersTitle: "User & Team Management",
+  usersDesc: "Manage team members, roles, field assignments, and permissions.",
+  addUserBtn: "Add / Invite User",
+  editUserBtn: "Edit User",
+  activeUser: "Active Session",
+  switchUser: "Switch User (Test)",
+  usersTabTeam: "Team Members",
+  usersTabRoles: "Roles & Permissions",
+  usersTabActivity: "Activity Log",
+  userRoleAdmin: "System Administrator",
+  userRoleAgronomist: "Agronomist",
+  userRoleOperator: "Field Operator",
+  userRoleViewer: "Field Observer",
+  userStatusOnline: "Online",
+  userStatusInField: "In Field",
+  userStatusOnLeave: "On Leave",
+  userStatusOffline: "Offline",
+  allFieldsAccess: "All Fields Access",
+  templateNotice: "Template Mode: User and role management interface is prepared and ready for backend authentication / database integration.",
 } as const;
 
 export default t;
