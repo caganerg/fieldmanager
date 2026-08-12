@@ -18,7 +18,7 @@ import { type FieldPolygon } from "@/components/Map";
 import type { LatLngTuple } from "leaflet";
 import WeatherDashboard from "@/components/WeatherDashboard";
 import FeaturesMenu from "@/components/FeaturesMenu";
-import UsersMenu from "@/components/UsersMenu";
+import UsersMenu, { type ActivityItem } from "@/components/UsersMenu";
 import { t } from "@/lib/translations";
 
 // Dynamically import Map with SSR disabled since Leaflet requires window/document
@@ -95,6 +95,10 @@ export default function Dashboard() {
   // Theme State
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
 
+  // User & Activity State
+  const [activeUserName, setActiveUserName] = useState("Guest");
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+
   // Form State
   const [formData, setFormData] = useState({
     name: "",
@@ -120,6 +124,45 @@ export default function Dashboard() {
     if (savedApiKey) {
       setOpenWeatherApiKey(savedApiKey);
       setApiKeyInput(savedApiKey);
+    }
+
+    // Load saved activities
+    const savedActivities = localStorage.getItem('fieldmanager-activities');
+    if (savedActivities) {
+      try {
+        const parsed = JSON.parse(savedActivities);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const cleanActivities = parsed.map((a: ActivityItem) => {
+            if (a.user === "Çağan Ergün" || a.user === "Çağan ERGÜN") {
+              return { ...a, user: "Guest" };
+            }
+            return a;
+          });
+          setActivities(cleanActivities);
+        } else {
+          setActivities([
+            {
+              id: "act-init",
+              user: "Guest",
+              action: "Workspace initialized and ready",
+              timestamp: Date.now() - 1000 * 60 * 5,
+              type: "default",
+            },
+          ]);
+        }
+      } catch {
+        // fallback
+      }
+    } else {
+      setActivities([
+        {
+          id: "act-init",
+          user: "Guest",
+          action: "Workspace initialized and ready",
+          timestamp: Date.now() - 1000 * 60 * 5,
+          type: "default",
+        },
+      ]);
     }
 
     // Check if first visit for welcome modal
@@ -159,6 +202,30 @@ export default function Dashboard() {
     }
   }, [theme]);
 
+  const addActivity = useCallback((action: string, type: ActivityItem["type"] = "default") => {
+    const newAct: ActivityItem = {
+      id: "act-" + Math.random().toString(36).substr(2, 9),
+      user: activeUserName,
+      action,
+      timestamp: Date.now(),
+      type,
+    };
+    setActivities(prev => {
+      const updated = [newAct, ...prev.slice(0, 49)];
+      if (typeof window !== "undefined") {
+        localStorage.setItem("fieldmanager-activities", JSON.stringify(updated));
+      }
+      return updated;
+    });
+  }, [activeUserName]);
+
+  const clearActivities = useCallback(() => {
+    setActivities([]);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("fieldmanager-activities", JSON.stringify([]));
+    }
+  }, []);
+
   const handlePolygonCreated = (coordinates: LatLngTuple[]) => {
     // Once polygon is drawn, stop drawing mode and open the new field form
     setIsDrawingMode(false);
@@ -178,9 +245,10 @@ export default function Dashboard() {
   const handleSaveField = () => {
     if (pendingCoordinates) {
       // Create new field
+      const fieldName = formData.name || `${t.fieldDefaultName} ${fields.length + 1}`;
       const newField: FieldPolygon = {
         id: Math.random().toString(36).substr(2, 9),
-        name: formData.name || `${t.fieldDefaultName} ${fields.length + 1}`,
+        name: fieldName,
         coordinates: pendingCoordinates,
         cropType: formData.cropType,
         plantDate: formData.plantDate ? new Date(formData.plantDate) : undefined,
@@ -191,8 +259,11 @@ export default function Dashboard() {
       setFields([...fields, newField]);
       setPendingCoordinates(null);
       setSelectedFieldId(newField.id);
+      addActivity(`Added new field "${newField.name}"${newField.cropType ? ` (${newField.cropType})` : ""}`, "field_add");
     } else if (selectedFieldId) {
       // Update existing field
+      const prevField = fields.find(f => f.id === selectedFieldId);
+      const updatedName = formData.name || prevField?.name || "Field";
       setFields(fields.map(f => f.id === selectedFieldId ? {
         ...f,
         name: formData.name,
@@ -202,6 +273,7 @@ export default function Dashboard() {
         groupId: formData.groupId === "unassigned" ? undefined : formData.groupId,
         color: formData.color || undefined
       } : f));
+      addActivity(`Updated field "${updatedName}"`, "field_edit");
     }
   };
 
@@ -228,20 +300,24 @@ export default function Dashboard() {
   };
 
   const handleDeleteField = (id: string) => {
+    const targetField = fields.find(f => f.id === id);
     setFields(fields.filter(f => f.id !== id));
     if (selectedFieldId === id) {
       setSelectedFieldId(null);
     }
+    addActivity(`Deleted field "${targetField?.name || id}"`, "field_delete");
   };
 
   const handleAddGroup = () => {
     if (newGroupName.trim()) {
+      const groupName = newGroupName.trim();
       setGroups([...groups, {
         id: Math.random().toString(36).substr(2, 9),
-        name: newGroupName.trim()
+        name: groupName
       }]);
       setNewGroupName("");
       setIsAddingGroup(false);
+      addActivity(`Created group "${groupName}"`, "group_add");
     }
   };
 
@@ -252,11 +328,13 @@ export default function Dashboard() {
   };
 
   const handleDeleteGroup = (id: string) => {
+    const targetGroup = groups.find(g => g.id === id);
     setGroups(groups.filter(g => g.id !== id));
     setFields(fields.map(f => f.groupId === id ? { ...f, groupId: undefined } : f));
     if (selectedGroupId === id) {
       setSelectedGroupId(null);
     }
+    addActivity(`Deleted group "${targetGroup?.name || id}"`, "group_add");
   };
 
   const handleRenameGroup = (id: string, newName: string) => {
@@ -408,6 +486,7 @@ export default function Dashboard() {
 
           setFields(parsedFields);
           setGroups(data.groups);
+          addActivity(`Imported dataset (${parsedFields.length} fields, ${data.groups.length} groups)`, "import");
 
           // Clear file input so the same file can be selected again
           if (fileInputRef.current) {
@@ -776,7 +855,14 @@ export default function Dashboard() {
             )}
             
             {/* Users & Team Management Panel */}
-            <UsersMenu fields={fields} />
+            <UsersMenu
+              fields={fields}
+              activities={activities}
+              onAddActivity={addActivity}
+              onClearActivities={clearActivities}
+              activeUserName={activeUserName}
+              onActiveUserChange={setActiveUserName}
+            />
             
             {/* Weather Dashboard Popover */}
             {isWeatherOpen && selectedFieldId && (
