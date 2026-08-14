@@ -132,13 +132,12 @@ export default function Dashboard() {
       try {
         const parsed = JSON.parse(savedActivities);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const cleanActivities = parsed.map((a: ActivityItem) => {
-            if (a.user === "Çağan Ergün" || a.user === "Çağan ERGÜN") {
-              return { ...a, user: "Guest" };
-            }
-            return a;
-          });
-          setActivities(cleanActivities);
+          const validActivities = parsed.filter(
+            (a: ActivityItem) => a && typeof a.id === "string" && typeof a.action === "string"
+          );
+          if (validActivities.length > 0) {
+            setActivities(validActivities);
+          }
         } else {
           setActivities([
             {
@@ -475,18 +474,52 @@ export default function Dashboard() {
         const content = event.target?.result as string;
         const data = JSON.parse(content);
 
-        // Basic validation
-        if (data && data.fields && Array.isArray(data.fields) && data.groups && Array.isArray(data.groups)) {
-          // Parse dates back to Date objects
-          const parsedFields = (data.fields as Array<Record<string, unknown>>).map((f) => ({
-            ...f,
-            plantDate: f.plantDate ? new Date(f.plantDate as string | number | Date) : undefined,
-            harvestDate: f.harvestDate ? new Date(f.harvestDate as string | number | Date) : undefined,
-          })) as FieldPolygon[];
+        // Strict structure and coordinate validation
+        if (data && Array.isArray(data.fields) && Array.isArray(data.groups)) {
+          const validatedFields: FieldPolygon[] = [];
+          
+          for (const f of data.fields) {
+            if (!f || typeof f !== "object") continue;
+            const item = f as Record<string, unknown>;
+            if (typeof item.id !== "string" || typeof item.name !== "string" || !Array.isArray(item.coordinates)) {
+              continue;
+            }
 
-          setFields(parsedFields);
-          setGroups(data.groups);
-          addActivity(`Imported dataset (${parsedFields.length} fields, ${data.groups.length} groups)`, "import");
+            const validCoords: LatLngTuple[] = [];
+            for (const coord of item.coordinates) {
+              if (Array.isArray(coord) && coord.length >= 2) {
+                const lat = Number(coord[0]);
+                const lng = Number(coord[1]);
+                if (Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                  validCoords.push([lat, lng]);
+                }
+              }
+            }
+
+            if (validCoords.length >= 3) {
+              validatedFields.push({
+                id: String(item.id).slice(0, 64),
+                name: String(item.name).slice(0, 128),
+                coordinates: validCoords,
+                cropType: item.cropType ? String(item.cropType).slice(0, 64) : undefined,
+                plantDate: item.plantDate ? new Date(item.plantDate as string | number | Date) : undefined,
+                harvestDate: item.harvestDate ? new Date(item.harvestDate as string | number | Date) : undefined,
+                groupId: item.groupId ? String(item.groupId).slice(0, 64) : undefined,
+                color: item.color ? String(item.color).slice(0, 32) : undefined,
+              });
+            }
+          }
+
+          const validatedGroups = data.groups
+            .filter((g: unknown) => g && typeof g === "object" && typeof (g as Record<string, unknown>).id === "string" && typeof (g as Record<string, unknown>).name === "string")
+            .map((g: Record<string, unknown>) => ({
+              id: String(g.id).slice(0, 64),
+              name: String(g.name).slice(0, 128)
+            }));
+
+          setFields(validatedFields);
+          setGroups(validatedGroups);
+          addActivity(`Imported dataset (${validatedFields.length} valid fields, ${validatedGroups.length} groups)`, "import");
 
           // Clear file input so the same file can be selected again
           if (fileInputRef.current) {

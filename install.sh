@@ -84,10 +84,15 @@ fi
 
 # Ask for API Key
 echo -e "\n${GREEN}>> OpenWeather API Key Setup${NC}"
-read -p "Sunucuya kurmak istiyorsanız hava durumu API anahtarınızı girin (yoksa boş bırakın): " WEATHER_API_KEY
+read -r -p "Enter your OpenWeather API key (press Enter to skip): " WEATHER_API_KEY
 if [ -n "$WEATHER_API_KEY" ]; then
-  echo "OPENWEATHER_API_KEY=$WEATHER_API_KEY" >> .env.local
-  echo -e "${GREEN}>> API Key saved to .env.local${NC}"
+  # Sanitize API key (alphanumeric and dashes only)
+  CLEAN_API_KEY=$(echo "$WEATHER_API_KEY" | tr -cd 'a-zA-Z0-9_-')
+  if [ -n "$CLEAN_API_KEY" ]; then
+    echo "OPENWEATHER_API_KEY=$CLEAN_API_KEY" >> .env.local
+    chmod 600 .env.local 2>/dev/null || true
+    echo -e "${GREEN}>> API Key safely saved to .env.local with restricted permissions (600).${NC}"
+  fi
 fi
 
 # 3. NPM Install and Build

@@ -121,16 +121,10 @@ export default function UsersMenu({
         try {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            // Filter out old mock dummy users (u2, u3, u4) and update u1 to Guest if previously Çağan
-            const clean = parsed
-              .filter((u: UserMember) => !["u2", "u3", "u4"].includes(u.id))
-              .map((u: UserMember) => {
-                if (u.id === "u1" && (u.name === "Çağan Ergün" || u.name === "Çağan ERGÜN")) {
-                  return { ...u, name: "Guest", email: "guest@fieldmanager.local", initials: "GU" };
-                }
-                return u;
-              });
-            if (clean.length > 0) return clean;
+            const validUsers = parsed.filter(
+              (u: UserMember) => u && typeof u.id === "string" && typeof u.name === "string"
+            );
+            if (validUsers.length > 0) return validUsers;
           }
         } catch (e) {
           console.error("Error reading saved users:", e);

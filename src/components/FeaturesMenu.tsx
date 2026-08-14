@@ -44,10 +44,53 @@ export default function FeaturesMenu({
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Temporary mock state for irrigation and fertilizer entries so the user can test/extend immediately
-  const [irrigationLogs, setIrrigationLogs] = useState<Array<{ id: string; fieldName: string; date: string; amount: string; method: string }>>([
-    { id: "1", fieldName: fields[0]?.name || "Field 1", date: "2026-08-08", amount: "25 m³", method: "Drip Irrigation" }
-  ]);
+  // Persistent state for irrigation and fertilizer entries
+  const [irrigationLogs, setIrrigationLogs] = useState<Array<{ id: string; fieldName: string; date: string; amount: string; method: string }>>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("fieldmanager-irrigation-logs");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch (e) {
+        console.error("Error reading irrigation logs:", e);
+      }
+    }
+    return [];
+  });
+
+  const [fertilizerLogs, setFertilizerLogs] = useState<Array<{ id: string; fieldName: string; date: string; type: string; amount: string }>>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("fieldmanager-fertilizer-logs");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch (e) {
+        console.error("Error reading fertilizer logs:", e);
+      }
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("fieldmanager-irrigation-logs", JSON.stringify(irrigationLogs));
+    } catch (e) {
+      console.error("Error saving irrigation logs:", e);
+    }
+  }, [irrigationLogs]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("fieldmanager-fertilizer-logs", JSON.stringify(fertilizerLogs));
+    } catch (e) {
+      console.error("Error saving fertilizer logs:", e);
+    }
+  }, [fertilizerLogs]);
+
   const [newIrrigation, setNewIrrigation] = useState({
     fieldId: selectedFieldId || fields[0]?.id || "",
     amount: "20",
@@ -55,9 +98,6 @@ export default function FeaturesMenu({
     date: new Date().toISOString().split("T")[0],
   });
 
-  const [fertilizerLogs, setFertilizerLogs] = useState<Array<{ id: string; fieldName: string; date: string; type: string; amount: string }>>([
-    { id: "1", fieldName: fields[0]?.name || "Field 1", date: "2026-08-05", type: "Urea (46% N)", amount: "15 kg/da" }
-  ]);
   const [newFertilizer, setNewFertilizer] = useState({
     fieldId: selectedFieldId || fields[0]?.id || "",
     type: "Urea (46% N)",
@@ -344,18 +384,24 @@ export default function FeaturesMenu({
                 Recent Irrigation Logs
               </h4>
               <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                {irrigationLogs.map((log) => (
-                  <div key={log.id} className="flex items-center justify-between p-2.5 rounded-lg border bg-zinc-50/50 dark:bg-zinc-900/50 text-xs">
-                    <div>
-                      <span className="font-semibold text-zinc-800 dark:text-zinc-200">{log.fieldName}</span>
-                      <span className="text-zinc-400 ml-2">({log.method})</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-medium text-sky-600 dark:text-sky-400">{log.amount}</span>
-                      <span className="text-zinc-400">{log.date}</span>
-                    </div>
+                {irrigationLogs.length === 0 ? (
+                  <div className="p-4 text-center text-xs text-zinc-400 bg-zinc-50/50 dark:bg-zinc-900/50 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-800">
+                    No irrigation records yet. Add one above.
                   </div>
-                ))}
+                ) : (
+                  irrigationLogs.map((log) => (
+                    <div key={log.id} className="flex items-center justify-between p-2.5 rounded-lg border bg-zinc-50/50 dark:bg-zinc-900/50 text-xs">
+                      <div>
+                        <span className="font-semibold text-zinc-800 dark:text-zinc-200">{log.fieldName}</span>
+                        <span className="text-zinc-400 ml-2">({log.method})</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium text-sky-600 dark:text-sky-400">{log.amount}</span>
+                        <span className="text-zinc-400">{log.date}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -456,18 +502,24 @@ export default function FeaturesMenu({
                 Recent Fertilization Logs
               </h4>
               <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                {fertilizerLogs.map((log) => (
-                  <div key={log.id} className="flex items-center justify-between p-2.5 rounded-lg border bg-zinc-50/50 dark:bg-zinc-900/50 text-xs">
-                    <div>
-                      <span className="font-semibold text-zinc-800 dark:text-zinc-200">{log.fieldName}</span>
-                      <span className="text-zinc-400 ml-2">({log.type})</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-medium text-amber-600 dark:text-amber-400">{log.amount}</span>
-                      <span className="text-zinc-400">{log.date}</span>
-                    </div>
+                {fertilizerLogs.length === 0 ? (
+                  <div className="p-4 text-center text-xs text-zinc-400 bg-zinc-50/50 dark:bg-zinc-900/50 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-800">
+                    No fertilization records yet. Add one above.
                   </div>
-                ))}
+                ) : (
+                  fertilizerLogs.map((log) => (
+                    <div key={log.id} className="flex items-center justify-between p-2.5 rounded-lg border bg-zinc-50/50 dark:bg-zinc-900/50 text-xs">
+                      <div>
+                        <span className="font-semibold text-zinc-800 dark:text-zinc-200">{log.fieldName}</span>
+                        <span className="text-zinc-400 ml-2">({log.type})</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium text-amber-600 dark:text-amber-400">{log.amount}</span>
+                        <span className="text-zinc-400">{log.date}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
