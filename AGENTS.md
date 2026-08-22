@@ -40,8 +40,10 @@ Do not add a `packageManager` field to `package.json` either; that field is a
 Corepack convention and Corepack has no Bun shim, so it only breaks CI. The
 `engines.bun` field is what documents the requirement here.
 
-Anything you write that documents or automates setup — README, `install.sh`,
-Dockerfiles, CI workflows — must assume Bun as well.
+Anything you write that documents or automates setup — README, Dockerfiles, CI
+workflows — must assume Bun as well. This project deliberately has no install
+script: setup and deployment steps live in `README.md` so they can be read
+before they are run. Do not add one back.
 
 ## Project shape
 
