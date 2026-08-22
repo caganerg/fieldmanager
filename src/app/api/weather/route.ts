@@ -67,29 +67,35 @@ export async function GET(request: NextRequest) {
     const forecastData = await forecastRes.json();
 
     // forecastData.list contains 3-hour intervals for 5 days.
-    // Extract one representative forecast per day
-    const dailyForecasts: ForecastItem[] = [];
-    const seenDates = new Set<string>();
+    // Pick one representative entry per day (midday when available, otherwise the
+    // first entry of that day) in a single pass over the list.
+    const byDate = new Map<string, ForecastItem>();
 
     if (Array.isArray(forecastData?.list)) {
       for (const item of forecastData.list as ForecastItem[]) {
         if (!item?.dt_txt) continue;
-        const date = item.dt_txt.split(" ")[0];
-        if (!seenDates.has(date)) {
-          seenDates.add(date);
-          const itemsForDate = (forecastData.list as ForecastItem[]).filter((i) => i?.dt_txt?.startsWith(date));
-          const targetItem = itemsForDate.find((i) => i?.dt_txt?.includes("12:00:00")) || itemsForDate[0];
-          if (targetItem) {
-            dailyForecasts.push(targetItem);
-          }
+        const [date, time] = item.dt_txt.split(" ");
+        // Keep the first entry seen for a day, then upgrade to the midday reading
+        // when it comes along (a day has at most one 12:00:00 entry).
+        if (!byDate.has(date) || time === "12:00:00") {
+          byDate.set(date, item);
         }
       }
     }
 
-    return NextResponse.json({
-      current: currentData,
-      forecast: dailyForecasts
-    });
+    const dailyForecasts: ForecastItem[] = Array.from(byDate.values());
+
+    return NextResponse.json(
+      {
+        current: currentData,
+        forecast: dailyForecasts
+      },
+      {
+        // Mirror the 10-minute upstream cache so repeat views are served without
+        // another round trip to this route.
+        headers: { "Cache-Control": "public, max-age=0, s-maxage=600, stale-while-revalidate=600" }
+      }
+    );
     
   } catch (error) {
     console.error("Weather API request failure:", error instanceof Error ? error.message : "Unknown error");

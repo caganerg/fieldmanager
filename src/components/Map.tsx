@@ -8,9 +8,9 @@ import L from "leaflet";
 
 // Fix default Leaflet icon paths in Next.js
 const defaultIcon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconUrl: "/leaflet/marker-icon.png",
+  iconRetinaUrl: "/leaflet/marker-icon-2x.png",
+  shadowUrl: "/leaflet/marker-shadow.png",
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
@@ -33,17 +33,24 @@ export interface FieldPolygon {
   color?: string;
 }
 
-// Determine polygon color based on harvest date proximity
-function getFieldColor(field: FieldPolygon): string {
-  if (!field.harvestDate) return '#3b82f6'; // Default blue if no harvest date
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
+// Midnight of the current day, in epoch milliseconds
+function startOfTodayMs(): number {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
+  return now.getTime();
+}
+
+// Determine polygon color based on harvest date proximity.
+// `todayMs` is passed in so it is computed once per render instead of once per field.
+function getFieldColor(field: FieldPolygon, todayMs: number): string {
+  if (!field.harvestDate) return '#3b82f6'; // Default blue if no harvest date
+
   const harvest = new Date(field.harvestDate);
   harvest.setHours(0, 0, 0, 0);
 
-  const diffMs = harvest.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  const diffDays = Math.ceil((harvest.getTime() - todayMs) / MS_PER_DAY);
 
   if (diffDays <= 0) return '#FF4500';    // Red — harvest day passed or today
   if (diffDays <= 15) return '#FFD700';   // Yellow — 1-15 days left  (user said 15–1)
@@ -69,6 +76,7 @@ export default function Map({
   initialLocation = null
 }: MapProps) {
   const [position] = useState<LatLng | null>(initialLocation);
+  const todayMs = startOfTodayMs();
 
   // Default center: Ankara, Turkey
   const center: [number, number] = [39.925533, 32.866287];
@@ -103,7 +111,7 @@ export default function Map({
 
       {/* Existing Fields */}
       {fields.map((field) => {
-        const harvestColor = getFieldColor(field);
+        const harvestColor = getFieldColor(field, todayMs);
         const isSelected = selectedFieldId === field.id;
         return (
           <Polygon
