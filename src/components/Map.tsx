@@ -21,6 +21,7 @@ const defaultIcon = L.icon({
 L.Marker.prototype.options.icon = defaultIcon;
 
 import { t } from "@/lib/translations";
+import { DEFAULT_CENTER } from "@/lib/map-constants";
 
 export interface FieldPolygon {
   id: string;
@@ -78,8 +79,7 @@ export default function Map({
   const [position] = useState<LatLng | null>(initialLocation);
   const todayMs = startOfTodayMs();
 
-  // Default center: Ankara, Turkey
-  const center: [number, number] = [39.925533, 32.866287];
+  const center = DEFAULT_CENTER;
 
   // Callback when a shape is drawn correctly
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

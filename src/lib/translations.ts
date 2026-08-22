@@ -79,7 +79,6 @@ export const t = {
   drawingActive: "Field Drawing Active on Map...",
   mapView: "Map View",
   weatherTitle: "Weather",
-  selectFieldForWeather: "Select Field (Weather)",
   
   mapIntersectError: "Error! Intersecting lines cannot be drawn!",
   
@@ -89,6 +88,9 @@ export const t = {
   weatherToday: "TODAY",
   weatherRainCloud: "Rain / Cloud",
   weatherFetchError: "Could not fetch weather data.",
+  weatherNotConfigured: "Weather is not set up yet",
+  weatherNotConfiguredDesc: "Add an OpenWeather API key to .env.local on the server and restart the app.",
+  weatherMapCenter: "Map center",
   
   fieldDefaultName: "Field",
   groupDefaultName: "Group",
@@ -111,8 +113,6 @@ export const t = {
   featureSoilAnalysisDesc: "pH, organic matter, and soil health reports",
   featureYield: "Yield & Harvest",
   featureYieldDesc: "Yield forecasts, crop growth, and production stats",
-  featureWeather: "Weather & Agro-Climate",
-  featureWeatherDesc: "Live conditions, rainfall, and 5-day agro-forecast",
   
   featureModalTitle: "Module Detail",
   featureModalPlaceholder: "This feature module is prepared and ready for integration. You can connect your custom logic and data here.",

@@ -14,14 +14,18 @@ import {
   Wind,
   Droplets,
   CloudFog,
-  AlertCircle
+  AlertCircle,
+  KeyRound,
+  MapPin
 } from "lucide-react";
 import { t } from "@/lib/translations";
 
-const fetcher = (url: string) => fetch(url).then((res) => {
-  if (!res.ok) throw new Error("API Error");
-  return res.json();
-});
+// Non-OK responses carry a JSON body explaining why, so parse them instead of
+// throwing: the panel can then tell "not set up yet" apart from a real failure.
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  return res.json().catch(() => ({ error: t.weatherFetchError }));
+};
 
 function getWeatherIcon(iconCode: string, className = "w-6 h-6") {
   switch (iconCode) {
@@ -50,9 +54,10 @@ function getWeatherIcon(iconCode: string, className = "w-6 h-6") {
 interface WeatherDashboardProps {
   lat: number;
   lon: number;
+  locationLabel?: string;
 }
 
-export default function WeatherDashboard({ lat, lon }: WeatherDashboardProps) {
+export default function WeatherDashboard({ lat, lon, locationLabel }: WeatherDashboardProps) {
   const { data, error, isLoading } = useSWR(`/api/weather?lat=${lat}&lon=${lon}`, fetcher);
 
   if (isLoading) {
@@ -67,6 +72,22 @@ export default function WeatherDashboard({ lat, lon }: WeatherDashboardProps) {
           <div className="h-10 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
           <div className="h-10 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
           <div className="h-10 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // The server has no API key yet. This is a setup step, not an error.
+  if (data?.configured === false) {
+    return (
+      <div className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 shadow-lg w-full md:w-[350px] flex items-start gap-3">
+        <KeyRound className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+        <div className="text-sm">
+          <p className="font-semibold text-zinc-700 dark:text-zinc-200 mb-1">{t.weatherNotConfigured}</p>
+          <p className="text-zinc-500 dark:text-zinc-400">{t.weatherNotConfiguredDesc}</p>
+          <code className="mt-2 block text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded px-2 py-1">
+            OPENWEATHER_API_KEY=...
+          </code>
         </div>
       </div>
     );
@@ -93,7 +114,15 @@ export default function WeatherDashboard({ lat, lon }: WeatherDashboardProps) {
       {/* Current Weather */}
       <div className="p-4 md:p-5 flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800/50">
         <div>
-          <div className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-1">{t.weatherCurrent}</div>
+          <div className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-1 flex items-center gap-1.5">
+            {t.weatherCurrent}
+            {locationLabel && (
+              <span className="inline-flex items-center gap-1 text-xs font-normal text-zinc-500 dark:text-zinc-400">
+                <MapPin className="w-3 h-3" />
+                {locationLabel}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-3">
             {getWeatherIcon(current.weather[0].icon, "w-10 h-10")}
             <div>

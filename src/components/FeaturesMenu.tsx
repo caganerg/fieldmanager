@@ -8,7 +8,6 @@ import {
   Bug,
   Activity,
   TrendingUp,
-  CloudRain,
   ChevronDown,
   X,
   Layers,
@@ -32,13 +31,11 @@ import { Input } from "@/components/ui/input";
 interface FeaturesMenuProps {
   fields: FieldPolygon[];
   selectedFieldId: string | null;
-  onOpenWeather?: () => void;
 }
 
 export default function FeaturesMenu({
   fields,
   selectedFieldId,
-  onOpenWeather,
 }: FeaturesMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeModal, setActiveModal] = useState<string | null>(null);
@@ -142,16 +139,6 @@ export default function FeaturesMenu({
       isInteractive: true,
     },
     {
-      id: "weather",
-      title: t.featureWeather,
-      desc: t.featureWeatherDesc,
-      icon: CloudRain,
-      color: "text-blue-500 bg-blue-50 dark:bg-blue-950/50 border-blue-200 dark:border-blue-800/80 hover:border-blue-400",
-      badgeColor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300",
-      status: t.activeStatus,
-      isInteractive: true,
-    },
-    {
       id: "pesticide",
       title: t.featurePesticide,
       desc: t.featurePesticideDesc,
@@ -185,11 +172,7 @@ export default function FeaturesMenu({
 
   const handleFeatureClick = (id: string) => {
     setIsOpen(false);
-    if (id === "weather") {
-      if (onOpenWeather) onOpenWeather();
-    } else {
-      setActiveModal(id);
-    }
+    setActiveModal(id);
   };
 
   const handleAddIrrigation = (e: React.FormEvent) => {

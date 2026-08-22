@@ -27,7 +27,9 @@ export async function GET(request: NextRequest) {
   const API_KEY = (process.env.OPENWEATHER_API_KEY || "").trim();
 
   if (!API_KEY) {
+    // `configured: false` lets the client show a setup hint rather than an error.
     return NextResponse.json({
+      configured: false,
       error: "Weather is not configured on this server. Set OPENWEATHER_API_KEY in .env.local."
     }, { status: 503 });
   }
@@ -35,6 +37,7 @@ export async function GET(request: NextRequest) {
   // Guard against a malformed value in the environment reaching the upstream API
   if (!/^[a-zA-Z0-9_-]{16,64}$/.test(API_KEY)) {
     return NextResponse.json({
+      configured: false,
       error: "The configured OPENWEATHER_API_KEY is malformed."
     }, { status: 503 });
   }

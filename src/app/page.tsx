@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { type FieldPolygon } from "@/components/Map";
+import { DEFAULT_CENTER } from "@/lib/map-constants";
 import type { LatLngTuple } from "leaflet";
 import WeatherDashboard from "@/components/WeatherDashboard";
 import FeaturesMenu from "@/components/FeaturesMenu";
@@ -836,52 +837,26 @@ export default function Dashboard() {
           </h2>
           
           <div className="pointer-events-auto flex items-center gap-3 relative">
+            {/* Weather — always present, independent of any field selection */}
+            <button
+              onClick={() => setIsWeatherOpen(!isWeatherOpen)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all shadow-xs cursor-pointer ${
+                isWeatherOpen
+                  ? "bg-emerald-50 border-emerald-300 text-emerald-700 dark:bg-emerald-950/60 dark:border-emerald-700 dark:text-emerald-300"
+                  : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:border-zinc-300"
+              }`}
+              title={t.weatherTitle}
+            >
+              <CloudRain className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+              <span>{t.weatherTitle}</span>
+            </button>
+
             {/* Agricultural Features & Modules Dropdown */}
             <FeaturesMenu
               fields={fields}
               selectedFieldId={selectedFieldId}
-              onOpenWeather={() => {
-                if (selectedFieldId) {
-                  setIsWeatherOpen(true);
-                } else if (fields.length > 0) {
-                  handleFieldSelect(fields[0].id);
-                  setIsWeatherOpen(true);
-                }
-              }}
             />
 
-            {fields.length > 0 && (
-              <div className="flex items-center gap-2 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 p-1 shadow-sm">
-                <select 
-                  className="bg-transparent text-sm border-none focus:ring-0 outline-none px-2 py-1 cursor-pointer text-zinc-700 dark:text-zinc-300"
-                  value={selectedFieldId || ""}
-                  onChange={(e) => {
-                    const id = e.target.value;
-                    if (id) {
-                      handleFieldSelect(id);
-                      setIsWeatherOpen(true);
-                    } else {
-                      handleFieldSelect("");
-                      setIsWeatherOpen(false);
-                    }
-                  }}
-                >
-                  <option value="">{t.selectFieldForWeather}</option>
-                  {fields.map(f => (
-                    <option key={f.id} value={f.id}>{f.name}</option>
-                  ))}
-                </select>
-                <button 
-                  onClick={() => selectedFieldId && setIsWeatherOpen(!isWeatherOpen)}
-                  disabled={!selectedFieldId}
-                  className={`p-1.5 rounded-md transition-colors ${isWeatherOpen ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500'} disabled:opacity-50 disabled:cursor-not-allowed`}
-                  title={t.weatherTitle}
-                >
-                  <CloudRain className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-            
             {/* Users & Team Management Panel */}
             <UsersMenu
               fields={fields}
@@ -892,14 +867,20 @@ export default function Dashboard() {
               onActiveUserChange={setActiveUserName}
             />
             
-            {/* Weather Dashboard Popover */}
-            {isWeatherOpen && selectedFieldId && (
-              <div className="absolute top-full right-0 mt-2 z-50">
+            {/* Weather Dashboard Popover — falls back to the map centre when no
+                field is selected, so the panel always has something to show. */}
+            {isWeatherOpen && (
+              <div className="absolute top-full left-0 mt-2 z-50">
                 {(() => {
                   const field = fields.find(f => f.id === selectedFieldId);
-                  const center = field ? getPolygonCenter(field.coordinates) : null;
-                  if (!center) return null;
-                  return <WeatherDashboard lat={center[0]} lon={center[1]} />;
+                  const center = (field ? getPolygonCenter(field.coordinates) : null) ?? DEFAULT_CENTER;
+                  return (
+                    <WeatherDashboard
+                      lat={center[0]}
+                      lon={center[1]}
+                      locationLabel={field ? field.name : t.weatherMapCenter}
+                    />
+                  );
                 })()}
               </div>
             )}
