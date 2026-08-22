@@ -16,8 +16,11 @@ curl -sSL https://raw.githubusercontent.com/caganerg/fieldmanager/main/install.s
 
 If you want to run the project locally for development:
 
-> **Note:** This project uses [Bun](https://bun.sh) as its package manager and
-> runtime. Node.js and npm are not required.
+> **Requirements:** [Bun](https://bun.sh) v1.2 or newer. Node.js and npm are not
+> required. If you don't have Bun yet:
+> ```bash
+> curl -fsSL https://bun.sh/install | bash
+> ```
 
 1. Install dependencies:
 ```bash
@@ -30,6 +33,14 @@ bun run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+Other useful commands:
+
+```bash
+bun run build   # production build
+bun run start   # serve the production build
+bun run lint    # eslint
+```
 
 ## Development Philosophy
 This project is a product of **Vibe Coding**.
