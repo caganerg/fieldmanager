@@ -2,7 +2,7 @@
 
 # ==========================================
 # Field Manager - Next.js Auto Setup Script
-# Linux Systems (PM2 Process Manager)
+# Linux Systems (Bun + systemd)
 # ==========================================
 
 set -e # Exit immediately if a command exits with a non-zero status
@@ -30,39 +30,25 @@ fi
 echo -e "\n${GREEN}[1/4] Checking system dependencies...${NC}"
 if command -v apt-get > /dev/null; then
   $SUDO apt-get update -y
-  $SUDO apt-get install -y curl git
+  $SUDO apt-get install -y curl git unzip
 elif command -v pacman > /dev/null; then
-  $SUDO pacman -Sy --needed --noconfirm curl git
+  $SUDO pacman -Sy --needed --noconfirm curl git unzip
 elif command -v dnf > /dev/null; then
-  $SUDO dnf install -y curl git
+  $SUDO dnf install -y curl git unzip
 fi
 
-if ! command -v node > /dev/null; then
-  echo -e "${YELLOW}>> Node.js not found. Installing Node.js...${NC}"
-  if command -v apt-get > /dev/null; then
-    curl -fsSL https://deb.nodesource.com/setup_20.x | $SUDO bash -
-    $SUDO apt-get install -y nodejs
-  elif command -v pacman > /dev/null; then
-    $SUDO pacman -S --needed --noconfirm nodejs
-  elif command -v dnf > /dev/null; then
-    $SUDO dnf install -y nodejs
-  fi
+# This project uses Bun as its package manager and runtime. Node.js and npm
+# are NOT required and are intentionally not installed.
+if ! command -v bun > /dev/null; then
+  echo -e "${YELLOW}>> Bun not found. Installing Bun...${NC}"
+  curl -fsSL https://bun.sh/install | bash
+  export BUN_INSTALL="$HOME/.bun"
+  export PATH="$BUN_INSTALL/bin:$PATH"
 else
-  echo -e "${GREEN}>> Node.js is already installed: $(node -v)${NC}"
+  echo -e "${GREEN}>> Bun is already installed: $(bun --version)${NC}"
 fi
 
-if ! command -v npm > /dev/null; then
-  echo -e "${YELLOW}>> npm not found. Installing npm...${NC}"
-  if command -v apt-get > /dev/null; then
-    $SUDO apt-get install -y npm
-  elif command -v pacman > /dev/null; then
-    $SUDO pacman -S --needed --noconfirm npm
-  elif command -v dnf > /dev/null; then
-    $SUDO dnf install -y npm
-  fi
-else
-  echo -e "${GREEN}>> npm is already installed: $(npm -v)${NC}"
-fi
+BUN_BIN=$(command -v bun)
 
 # 2. Project Setup
 echo -e "\n${GREEN}[2/4] Setting up the project...${NC}"
@@ -95,45 +81,59 @@ if [ -n "$WEATHER_API_KEY" ]; then
   fi
 fi
 
-# 3. NPM Install and Build
-echo -e "\n${GREEN}[3/4] Installing NPM dependencies and building the application...${NC}"
-npm install
-npm run build
+# 3. Install dependencies and build
+echo -e "\n${GREEN}[3/4] Installing dependencies with Bun and building the application...${NC}"
+bun install
+bun run build
 
-# 4. Process Management (PM2)
-echo -e "\n${GREEN}[4/4] Setting up PM2 for background process management...${NC}"
+# 4. Process Management (systemd user service)
+echo -e "\n${GREEN}[4/4] Setting up a systemd service for background process management...${NC}"
 
-if ! command -v pm2 > /dev/null; then
-  echo -e "${YELLOW}>> PM2 not found. Installing PM2 globally...${NC}"
-  $SUDO npm install -g pm2
+if command -v systemctl > /dev/null; then
+  SERVICE_DIR="$HOME/.config/systemd/user"
+  mkdir -p "$SERVICE_DIR"
+  cat > "$SERVICE_DIR/fieldmanager.service" <<EOF
+[Unit]
+Description=Field Manager (Next.js, served by Bun)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=$PROJECT_DIR
+ExecStart=$BUN_BIN run start
+Restart=on-failure
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=3000
+
+[Install]
+WantedBy=default.target
+EOF
+
+  systemctl --user daemon-reload
+  systemctl --user enable --now fieldmanager.service
+
+  # Keep the service running after logout
+  $SUDO loginctl enable-linger "$USER" 2>/dev/null || true
+
+  echo -e "${GREEN}>> Service 'fieldmanager' is enabled and running.${NC}"
+  MANAGED_BY_SYSTEMD=1
 else
-  echo -e "${GREEN}>> PM2 is already installed: $(pm2 -v)${NC}"
-fi
-
-# Stop and delete old instance if exists
-pm2 delete fieldmanager 2>/dev/null || true
-
-# Start app with PM2
-cd "$PROJECT_DIR"
-pm2 start npm --name "fieldmanager" -- start
-
-# Save PM2 process list
-pm2 save
-
-# Setup PM2 startup script on system boot
-STARTUP_CMD=$(pm2 startup | grep -E "sudo env PATH=" || true)
-if [ -n "$STARTUP_CMD" ]; then
-  eval "$STARTUP_CMD" || true
+  echo -e "${YELLOW}>> systemd not found. Starting the app in the background with nohup instead.${NC}"
+  nohup bun run start > "$PROJECT_DIR/fieldmanager.log" 2>&1 &
+  echo -e "${GREEN}>> App started. Logs: $PROJECT_DIR/fieldmanager.log${NC}"
+  MANAGED_BY_SYSTEMD=0
 fi
 
 echo -e "\n${BLUE}==========================================${NC}"
 echo -e "${GREEN}  Installation Complete! 🚀 ${NC}"
 echo -e "${BLUE}==========================================${NC}"
-echo -e "${GREEN}Your Next.js app 'Field Manager' is now running in the background via PM2.${NC}"
-echo -e "You can check the status with: ${YELLOW}pm2 status${NC} or ${YELLOW}pm2 show fieldmanager${NC}"
-echo -e "You can view logs with:        ${YELLOW}pm2 logs fieldmanager${NC}"
-echo -e "You can restart with:          ${YELLOW}pm2 restart fieldmanager${NC}"
+echo -e "${GREEN}Your Next.js app 'Field Manager' is now running in the background.${NC}"
+if [ "$MANAGED_BY_SYSTEMD" = "1" ]; then
+  echo -e "Check the status with: ${YELLOW}systemctl --user status fieldmanager${NC}"
+  echo -e "View logs with:        ${YELLOW}journalctl --user -u fieldmanager -f${NC}"
+  echo -e "Restart with:          ${YELLOW}systemctl --user restart fieldmanager${NC}"
+fi
 echo -e "The app is running on port:    ${YELLOW}3000${NC} (default)"
 echo -e "\n${YELLOW}Note: If you have a firewall enabled, don't forget to allow the port:${NC}"
 echo -e "sudo ufw allow 3000/tcp\n"
-

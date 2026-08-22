@@ -4,7 +4,7 @@ Field Manager is a modern web application for managing fields, crops, and agricu
 
 ## 🚀 Quick Installation
 
-You can easily install and run Field Manager as a background service managed via PM2. The installation script will automatically check/install dependencies, PM2, configure the environment, and set up the background service.
+You can easily install and run Field Manager as a background service managed via systemd. The installation script will automatically check/install dependencies (including Bun), configure the environment, and set up a systemd background service.
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/caganerg/fieldmanager/main/install.sh | bash
@@ -16,14 +16,17 @@ curl -sSL https://raw.githubusercontent.com/caganerg/fieldmanager/main/install.s
 
 If you want to run the project locally for development:
 
+> **Note:** This project uses [Bun](https://bun.sh) as its package manager and
+> runtime. Node.js and npm are not required.
+
 1. Install dependencies:
 ```bash
-npm install
+bun install
 ```
 
 2. Run the development server:
 ```bash
-npm run dev
+bun run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
