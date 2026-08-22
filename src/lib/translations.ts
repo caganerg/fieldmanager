@@ -103,6 +103,8 @@ export const t = {
   inDevelopment: "In Development",
   closeBtn: "Close",
   
+  featureWeather: "Weather & Agro-Climate",
+  featureWeatherDesc: "Live conditions, rainfall, and 5-day agro-forecast",
   featureIrrigation: "Irrigation Management",
   featureIrrigationDesc: "Watering schedule, soil moisture, and flow rate tracking",
   featureFertilizer: "Fertilization Tracking",
@@ -114,6 +116,18 @@ export const t = {
   featureYield: "Yield & Harvest",
   featureYieldDesc: "Yield forecasts, crop growth, and production stats",
   
+  featureIrrigationShort: "Irrigation",
+  featureFertilizerShort: "Fertilizer",
+  featurePesticideShort: "Protection",
+  featureSoilAnalysisShort: "Soil",
+  featureYieldShort: "Yield",
+
+  dragToPanel: "Drag a tool onto the panel to keep it there, or drop it back here to tuck it away.",
+  dragToTools: "drag into Tools to put it back",
+  dropToPin: "Drop to pin to the panel",
+  dropToTools: "Drop into Tools",
+  toolsAllPinned: "Every tool is pinned to the panel. Drag one back here to tuck it away.",
+
   featureModalTitle: "Module Detail",
   featureModalPlaceholder: "This feature module is prepared and ready for integration. You can connect your custom logic and data here.",
 

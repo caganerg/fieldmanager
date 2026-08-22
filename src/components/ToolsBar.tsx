@@ -8,15 +8,20 @@ import {
   Bug,
   Activity,
   TrendingUp,
+  CloudRain,
   ChevronDown,
   X,
   Layers,
   Plus,
   Info,
-  ChevronRight
+  ChevronRight,
+  GripVertical
 } from "lucide-react";
 import { t } from "@/lib/translations";
 import { type FieldPolygon } from "@/components/Map";
+import { DEFAULT_CENTER } from "@/lib/map-constants";
+import { getPolygonCenter } from "@/lib/geo";
+import WeatherDashboard from "@/components/WeatherDashboard";
 import {
   Dialog,
   DialogContent,
@@ -28,18 +33,60 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 
-interface FeaturesMenuProps {
+const PINNED_STORAGE_KEY = "fieldmanager-pinned-tools";
+
+// Weather sits on the panel out of the box; everything else starts inside the
+// Tools folder. Either can be dragged the other way.
+const DEFAULT_PINNED = ["weather"];
+
+interface ToolsBarProps {
   fields: FieldPolygon[];
   selectedFieldId: string | null;
 }
 
-export default function FeaturesMenu({
+export default function ToolsBar({
   fields,
   selectedFieldId,
-}: FeaturesMenuProps) {
+}: ToolsBarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [isWeatherOpen, setIsWeatherOpen] = useState(false);
+
+  // Ids currently pinned to the header panel, in the order they appear there.
+  // Starts at the default so the server and the first client render agree; the
+  // stored layout is applied after mount.
+  const [pinnedIds, setPinnedIds] = useState<string[]>(DEFAULT_PINNED);
+  const [pinnedLoaded, setPinnedLoaded] = useState(false);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+
   const menuRef = useRef<HTMLDivElement>(null);
+  const weatherRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(PINNED_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setPinnedIds(parsed.filter((id): id is string => typeof id === "string"));
+        }
+      }
+    } catch (e) {
+      console.error("Error reading pinned tools:", e);
+    }
+    setPinnedLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    // Don't write the default over a stored layout before it has been read.
+    if (!pinnedLoaded) return;
+    try {
+      localStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify(pinnedIds));
+    } catch (e) {
+      console.error("Error saving pinned tools:", e);
+    }
+  }, [pinnedIds, pinnedLoaded]);
 
   // Persistent state for irrigation and fertilizer entries
   const [irrigationLogs, setIrrigationLogs] = useState<Array<{ id: string; fieldName: string; date: string; amount: string; method: string }>>(() => {
@@ -102,7 +149,7 @@ export default function FeaturesMenu({
     date: new Date().toISOString().split("T")[0],
   });
 
-  // Close menu when clicking outside
+  // Close the Tools dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -117,63 +164,145 @@ export default function FeaturesMenu({
     };
   }, [isOpen]);
 
-  const featureItems = [
+  // Same for the weather popover, wherever it is currently anchored
+  useEffect(() => {
+    if (!isWeatherOpen) return;
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+      const inWeather = weatherRef.current?.contains(target);
+      const inMenu = menuRef.current?.contains(target);
+      if (!inWeather && !inMenu) setIsWeatherOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isWeatherOpen]);
+
+  const toolItems = [
+    {
+      id: "weather",
+      title: t.featureWeather,
+      short: t.weatherTitle,
+      desc: t.featureWeatherDesc,
+      icon: CloudRain,
+      accent: "text-blue-500 dark:text-blue-400",
+      color: "text-blue-500 bg-blue-50 dark:bg-blue-950/50 border-blue-200 dark:border-blue-800/80 hover:border-blue-400",
+      badgeColor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300",
+      status: t.activeStatus,
+    },
     {
       id: "irrigation",
       title: t.featureIrrigation,
+      short: t.featureIrrigationShort,
       desc: t.featureIrrigationDesc,
       icon: Droplets,
+      accent: "text-sky-500 dark:text-sky-400",
       color: "text-sky-500 bg-sky-50 dark:bg-sky-950/50 border-sky-200 dark:border-sky-800/80 hover:border-sky-400",
       badgeColor: "bg-sky-100 text-sky-700 dark:bg-sky-900/60 dark:text-sky-300",
       status: t.inDevelopment,
-      isInteractive: true,
     },
     {
       id: "fertilizer",
       title: t.featureFertilizer,
+      short: t.featureFertilizerShort,
       desc: t.featureFertilizerDesc,
       icon: FlaskConical,
+      accent: "text-amber-500 dark:text-amber-400",
       color: "text-amber-500 bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-800/80 hover:border-amber-400",
       badgeColor: "bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300",
       status: t.inDevelopment,
-      isInteractive: true,
     },
     {
       id: "pesticide",
       title: t.featurePesticide,
+      short: t.featurePesticideShort,
       desc: t.featurePesticideDesc,
       icon: Bug,
+      accent: "text-rose-500 dark:text-rose-400",
       color: "text-rose-500 bg-rose-50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-800/80 hover:border-rose-400",
       badgeColor: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
       status: t.comingSoon,
-      isInteractive: true,
     },
     {
       id: "soil",
       title: t.featureSoilAnalysis,
+      short: t.featureSoilAnalysisShort,
       desc: t.featureSoilAnalysisDesc,
       icon: Activity,
+      accent: "text-emerald-500 dark:text-emerald-400",
       color: "text-emerald-500 bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800/80 hover:border-emerald-400",
       badgeColor: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
       status: t.comingSoon,
-      isInteractive: true,
     },
     {
       id: "yield",
       title: t.featureYield,
+      short: t.featureYieldShort,
       desc: t.featureYieldDesc,
       icon: TrendingUp,
+      accent: "text-purple-500 dark:text-purple-400",
       color: "text-purple-500 bg-purple-50 dark:bg-purple-950/50 border-purple-200 dark:border-purple-800/80 hover:border-purple-400",
       badgeColor: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
       status: t.comingSoon,
-      isInteractive: true,
     },
   ];
 
-  const handleFeatureClick = (id: string) => {
+  const pinnedItems = pinnedIds
+    .map((id) => toolItems.find((item) => item.id === id))
+    .filter((item): item is (typeof toolItems)[number] => Boolean(item));
+  const menuItems = toolItems.filter((item) => !pinnedIds.includes(item.id));
+
+  const handleToolClick = (id: string) => {
     setIsOpen(false);
+    if (id === "weather") {
+      setIsWeatherOpen((open) => !open);
+      return;
+    }
     setActiveModal(id);
   };
+
+  const handleDragStart = (event: React.DragEvent, id: string) => {
+    event.dataTransfer.setData("text/plain", id);
+    event.dataTransfer.effectAllowed = "move";
+    setDraggingId(id);
+  };
+
+  const allowDrop = (event: React.DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDropOnPanel = (event: React.DragEvent) => {
+    event.preventDefault();
+    const id = event.dataTransfer.getData("text/plain");
+    if (id && toolItems.some((item) => item.id === id)) {
+      setPinnedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    }
+    setDraggingId(null);
+  };
+
+  const handleDropOnTools = (event: React.DragEvent) => {
+    event.preventDefault();
+    const id = event.dataTransfer.getData("text/plain");
+    if (id) {
+      setPinnedIds((prev) => prev.filter((pinned) => pinned !== id));
+      if (id === "weather") setIsWeatherOpen(false);
+    }
+    setDraggingId(null);
+  };
+
+  const weatherField = fields.find((field) => field.id === selectedFieldId);
+  const weatherCenter =
+    (weatherField ? getPolygonCenter(weatherField.coordinates) : null) ?? DEFAULT_CENTER;
+
+  const weatherPopover = (
+    <div className="absolute top-full left-0 mt-2 z-50 w-[350px] max-w-[calc(100vw-2rem)]">
+      <WeatherDashboard
+        lat={weatherCenter[0]}
+        lon={weatherCenter[1]}
+        locationLabel={weatherField ? weatherField.name : t.weatherMapCenter}
+      />
+    </div>
+  );
 
   const handleAddIrrigation = (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,77 +330,157 @@ export default function FeaturesMenu({
     setFertilizerLogs([newLog, ...fertilizerLogs]);
   };
 
+  const isDraggingPinned = draggingId !== null && pinnedIds.includes(draggingId);
+
   return (
-    <div className="relative" ref={menuRef}>
-      {/* Trigger Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all shadow-xs cursor-pointer ${
-          isOpen
-            ? "bg-emerald-50 border-emerald-300 text-emerald-700 dark:bg-emerald-950/60 dark:border-emerald-700 dark:text-emerald-300"
-            : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:border-zinc-300"
-        }`}
-        title={t.featuresTitle}
-      >
-        <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-        <span>{t.featuresBtn}</span>
-        <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
-      </button>
-
-      {/* Dropdown Panel */}
-      {isOpen && (
-        <div className="absolute top-full right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-zinc-200/80 dark:border-zinc-800 p-4 shadow-xl z-50 animate-in fade-in-0 zoom-in-95 duration-150">
-          <div className="flex items-center justify-between pb-3 mb-3 border-b border-zinc-100 dark:border-zinc-800">
-            <div>
-              <h3 className="text-sm font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-1.5">
-                <Layers className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                {t.featuresTitle}
-              </h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                {t.featuresDesc}
-              </p>
-            </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="p-1 rounded-md text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Feature Grid */}
-          <div className="grid grid-cols-1 gap-2 max-h-[420px] overflow-y-auto pr-1">
-            {featureItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.id}
-                  onClick={() => handleFeatureClick(item.id)}
-                  className={`group flex items-start gap-3 p-2.5 rounded-xl border transition-all cursor-pointer ${item.color} bg-opacity-40 hover:bg-opacity-80`}
+    <>
+      {/* Pinned strip. Also the drop target that pins a tool, so it appears
+          empty-but-outlined while something is being dragged. */}
+      {(pinnedItems.length > 0 || draggingId) && (
+        <div
+          onDragOver={allowDrop}
+          onDrop={handleDropOnPanel}
+          className={`flex items-center gap-2 rounded-lg transition-all ${
+            draggingId
+              ? "border-2 border-dashed border-emerald-400 dark:border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/30 px-2 py-1"
+              : ""
+          }`}
+        >
+          {pinnedItems.map((item) => {
+            const Icon = item.icon;
+            const isWeather = item.id === "weather";
+            const isActive = isWeather ? isWeatherOpen : activeModal === item.id;
+            return (
+              <div key={item.id} className="relative" ref={isWeather ? weatherRef : undefined}>
+                <button
+                  draggable
+                  onDragStart={(event) => handleDragStart(event, item.id)}
+                  onDragEnd={() => setDraggingId(null)}
+                  onClick={() => handleToolClick(item.id)}
+                  title={`${item.title} — ${t.dragToTools}`}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all shadow-xs cursor-pointer ${
+                    draggingId === item.id ? "opacity-40" : ""
+                  } ${
+                    isActive
+                      ? "bg-emerald-50 border-emerald-300 text-emerald-700 dark:bg-emerald-950/60 dark:border-emerald-700 dark:text-emerald-300"
+                      : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:border-zinc-300"
+                  }`}
                 >
-                  <div className="p-2 rounded-lg bg-white/80 dark:bg-zinc-900/80 shadow-xs mt-0.5">
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1.5">
-                      <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-100 truncate">
-                        {item.title}
-                      </span>
-                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${item.badgeColor}`}>
-                        {item.status}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-2 mt-0.5">
-                      {item.desc}
-                    </p>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-200 self-center opacity-60 group-hover:opacity-100 transition-opacity" />
-                </div>
-              );
-            })}
-          </div>
+                  <Icon className={`w-4 h-4 ${item.accent}`} />
+                  <span>{item.short}</span>
+                  {isWeather && (
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 ${isWeatherOpen ? "rotate-180" : ""}`}
+                    />
+                  )}
+                </button>
+                {isWeather && isWeatherOpen && weatherPopover}
+              </div>
+            );
+          })}
+
+          {pinnedItems.length === 0 && draggingId && (
+            <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300 px-1 py-0.5">
+              {t.dropToPin}
+            </span>
+          )}
         </div>
       )}
+
+      {/* The Tools folder. Dropping a pinned tool anywhere on it puts it back. */}
+      <div
+        className="relative"
+        ref={menuRef}
+        onDragOver={allowDrop}
+        onDrop={handleDropOnTools}
+      >
+        {/* Trigger Button */}
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all shadow-xs cursor-pointer ${
+            isDraggingPinned
+              ? "border-2 border-dashed border-emerald-400 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300"
+              : isOpen
+                ? "bg-emerald-50 border-emerald-300 text-emerald-700 dark:bg-emerald-950/60 dark:border-emerald-700 dark:text-emerald-300"
+                : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:border-zinc-300"
+          }`}
+          title={t.featuresTitle}
+        >
+          <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <span>{isDraggingPinned ? t.dropToTools : t.featuresBtn}</span>
+          <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+        </button>
+
+        {/* Dropdown Panel */}
+        {isOpen && (
+          <div className="absolute top-full right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-zinc-200/80 dark:border-zinc-800 p-4 shadow-xl z-50 animate-in fade-in-0 zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-zinc-100 dark:border-zinc-800">
+              <div>
+                <h3 className="text-sm font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  {t.featuresTitle}
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  {t.dragToPanel}
+                </p>
+              </div>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-1 rounded-md text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Feature Grid */}
+            <div className="grid grid-cols-1 gap-2 max-h-[420px] overflow-y-auto pr-1">
+              {menuItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div
+                    key={item.id}
+                    draggable
+                    onDragStart={(event) => handleDragStart(event, item.id)}
+                    onDragEnd={() => setDraggingId(null)}
+                    onClick={() => handleToolClick(item.id)}
+                    className={`group flex items-start gap-3 p-2.5 rounded-xl border transition-all cursor-pointer ${item.color} bg-opacity-40 hover:bg-opacity-80 ${
+                      draggingId === item.id ? "opacity-40" : ""
+                    }`}
+                  >
+                    <div className="p-2 rounded-lg bg-white/80 dark:bg-zinc-900/80 shadow-xs mt-0.5">
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1.5">
+                        <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-100 truncate">
+                          {item.title}
+                        </span>
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${item.badgeColor}`}>
+                          {item.status}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-2 mt-0.5">
+                        {item.desc}
+                      </p>
+                    </div>
+                    <GripVertical className="w-3.5 h-3.5 text-zinc-400 self-center opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ChevronRight className="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-200 self-center opacity-60 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                );
+              })}
+
+              {menuItems.length === 0 && (
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center py-6 px-2">
+                  {t.toolsAllPinned}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Weather lives here while it is inside the folder */}
+        {isWeatherOpen && !pinnedIds.includes("weather") && weatherPopover}
+      </div>
 
       {/* Feature Modals for Upcoming / Extensible Modules */}
       
@@ -518,10 +727,10 @@ export default function FeaturesMenu({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-emerald-600" />
-              {activeModal ? featureItems.find(f => f.id === activeModal)?.title : t.featureModalTitle}
+              {activeModal ? toolItems.find(f => f.id === activeModal)?.title : t.featureModalTitle}
             </DialogTitle>
             <DialogDescription>
-              {activeModal ? featureItems.find(f => f.id === activeModal)?.desc : ""}
+              {activeModal ? toolItems.find(f => f.id === activeModal)?.desc : ""}
             </DialogDescription>
           </DialogHeader>
 
@@ -558,6 +767,6 @@ export default function FeaturesMenu({
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

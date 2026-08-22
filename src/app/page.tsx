@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 
-import { Trees, MapPin, Settings, Trash2, Edit2, ChevronRight, ChevronDown, Save, X, Plus, Folder, FolderOpen, GripVertical, Palette, Download, Upload, Info, Sun, Moon, Monitor, CloudRain } from "lucide-react";
+import { Trees, MapPin, Settings, Trash2, Edit2, ChevronRight, ChevronDown, Save, X, Plus, Folder, FolderOpen, GripVertical, Palette, Download, Upload, Info, Sun, Moon, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,10 +15,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { type FieldPolygon } from "@/components/Map";
-import { DEFAULT_CENTER } from "@/lib/map-constants";
 import type { LatLngTuple } from "leaflet";
-import WeatherDashboard from "@/components/WeatherDashboard";
-import FeaturesMenu from "@/components/FeaturesMenu";
+import ToolsBar from "@/components/ToolsBar";
 import UsersMenu, { type ActivityItem } from "@/components/UsersMenu";
 import { t } from "@/lib/translations";
 
@@ -27,19 +25,6 @@ const Map = dynamic(() => import("@/components/Map"), {
   ssr: false,
   loading: () => <div className="w-full h-full flex flex-col items-center justify-center text-zinc-500 bg-zinc-100 dark:bg-zinc-900 absolute inset-0">Loading map...</div>
 });
-
-// Calculate simple bounding box center for a polygon
-function getPolygonCenter(coordinates: LatLngTuple[]): LatLngTuple | null {
-  if (!coordinates || coordinates.length === 0) return null;
-  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
-  coordinates.forEach(([lat, lng]) => {
-    if (lat < minLat) minLat = lat;
-    if (lat > maxLat) maxLat = lat;
-    if (lng < minLng) minLng = lng;
-    if (lng > maxLng) maxLng = lng;
-  });
-  return [(minLat + maxLat) / 2, (minLng + maxLng) / 2];
-}
 
 // Calculate polygon area in square meters from LatLngTuple coordinates
 // Uses the Shoelace formula on a spherical Earth approximation
@@ -88,7 +73,6 @@ export default function Dashboard() {
   const [newGroupName, setNewGroupName] = useState("");
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isWeatherOpen, setIsWeatherOpen] = useState(false);
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(false);
 
   // Theme State
@@ -111,8 +95,6 @@ export default function Dashboard() {
   // Reference for hidden file input
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Wraps the Weather button and its popover, so a click anywhere else closes it
-  const weatherRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -199,18 +181,6 @@ export default function Dashboard() {
       return () => mediaQuery.removeEventListener('change', handler);
     }
   }, [theme]);
-
-  // Close the weather popover when clicking outside it, matching Tools and Users
-  useEffect(() => {
-    if (!isWeatherOpen) return;
-    function handleClickOutside(event: MouseEvent) {
-      if (weatherRef.current && !weatherRef.current.contains(event.target as Node)) {
-        setIsWeatherOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isWeatherOpen]);
 
   const addActivity = useCallback((action: string, type: ActivityItem["type"] = "default") => {
     const newAct: ActivityItem = {
@@ -852,43 +822,8 @@ export default function Dashboard() {
           </h2>
           
           <div className="pointer-events-auto flex items-center gap-3 relative">
-            {/* Weather — always present, independent of any field selection */}
-            <div className="relative" ref={weatherRef}>
-              <button
-                onClick={() => setIsWeatherOpen(!isWeatherOpen)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all shadow-xs cursor-pointer ${
-                  isWeatherOpen
-                    ? "bg-emerald-50 border-emerald-300 text-emerald-700 dark:bg-emerald-950/60 dark:border-emerald-700 dark:text-emerald-300"
-                    : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800/80 hover:border-zinc-300"
-                }`}
-                title={t.weatherTitle}
-              >
-                <CloudRain className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-                <span>{t.weatherTitle}</span>
-                <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 ${isWeatherOpen ? "rotate-180" : ""}`} />
-              </button>
-
-              {/* Weather Dashboard Popover — falls back to the map centre when no
-                  field is selected, so the panel always has something to show. */}
-              {isWeatherOpen && (
-                <div className="absolute top-full left-0 mt-2 z-50 w-[350px] max-w-[calc(100vw-2rem)]">
-                  {(() => {
-                    const field = fields.find(f => f.id === selectedFieldId);
-                    const center = (field ? getPolygonCenter(field.coordinates) : null) ?? DEFAULT_CENTER;
-                    return (
-                      <WeatherDashboard
-                        lat={center[0]}
-                        lon={center[1]}
-                        locationLabel={field ? field.name : t.weatherMapCenter}
-                      />
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-
-            {/* Agricultural Features & Modules Dropdown */}
-            <FeaturesMenu
+            {/* Pinned tools + the Tools folder they can be dragged in and out of */}
+            <ToolsBar
               fields={fields}
               selectedFieldId={selectedFieldId}
             />
