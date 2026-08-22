@@ -9,7 +9,6 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const rawLat = searchParams.get("lat");
   const rawLon = searchParams.get("lon");
-  const customApiKey = searchParams.get("apiKey");
 
   if (!rawLat || !rawLon) {
     return NextResponse.json({ error: "Latitude and longitude are required." }, { status: 400 });
@@ -23,17 +22,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid coordinate values provided." }, { status: 400 });
   }
 
-  const API_KEY = (customApiKey || process.env.OPENWEATHER_API_KEY || "").trim();
+  // The key is only ever read from the server environment. It is never accepted
+  // from the request, so it cannot leak into browser storage, URLs or logs.
+  const API_KEY = (process.env.OPENWEATHER_API_KEY || "").trim();
 
   if (!API_KEY) {
-    return NextResponse.json({ 
-      error: "API Key missing. Please configure your OpenWeather API key in settings or server environment." 
-    }, { status: 500 });
+    return NextResponse.json({
+      error: "Weather is not configured on this server. Set OPENWEATHER_API_KEY in .env.local."
+    }, { status: 503 });
   }
 
-  // Validate API key format (alphanumeric string)
+  // Guard against a malformed value in the environment reaching the upstream API
   if (!/^[a-zA-Z0-9_-]{16,64}$/.test(API_KEY)) {
-    return NextResponse.json({ error: "Invalid API key format." }, { status: 400 });
+    return NextResponse.json({
+      error: "The configured OPENWEATHER_API_KEY is malformed."
+    }, { status: 503 });
   }
 
   try {

@@ -51,3 +51,8 @@ Next.js 16 App Router with Turbopack, React 19, Tailwind CSS v4 and Leaflet
 (`react-leaflet` + `react-leaflet-draw`) for the map. Source lives in `src/`,
 the weather proxy route is `src/app/api/weather/route.ts` and needs
 `OPENWEATHER_API_KEY` in `.env.local`.
+
+The key is read from the server environment only. The route deliberately does
+not accept a key from the request, and there is no settings field for one —
+that path used to put a secret in `localStorage` and in request URLs. Do not
+add it back.

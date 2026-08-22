@@ -89,8 +89,6 @@ export default function Dashboard() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isWeatherOpen, setIsWeatherOpen] = useState(false);
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(false);
-  const [openWeatherApiKey, setOpenWeatherApiKey] = useState("");
-  const [apiKeyInput, setApiKeyInput] = useState("");
 
   // Theme State
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
@@ -119,12 +117,9 @@ export default function Dashboard() {
     if (savedTheme) {
       setTheme(savedTheme);
     }
-    // Load saved OpenWeather API key
-    const savedApiKey = localStorage.getItem('fieldmanager-weather-api-key');
-    if (savedApiKey) {
-      setOpenWeatherApiKey(savedApiKey);
-      setApiKeyInput(savedApiKey);
-    }
+    // The weather key now lives only in the server environment. Drop any copy
+    // left in this browser by an earlier version.
+    localStorage.removeItem('fieldmanager-weather-api-key');
 
     // Load saved activities
     const savedActivities = localStorage.getItem('fieldmanager-activities');
@@ -904,7 +899,7 @@ export default function Dashboard() {
                   const field = fields.find(f => f.id === selectedFieldId);
                   const center = field ? getPolygonCenter(field.coordinates) : null;
                   if (!center) return null;
-                  return <WeatherDashboard lat={center[0]} lon={center[1]} apiKey={openWeatherApiKey || undefined} />;
+                  return <WeatherDashboard lat={center[0]} lon={center[1]} />;
                 })()}
               </div>
             )}
@@ -1247,37 +1242,6 @@ export default function Dashboard() {
                   : theme === 'dark'
                     ? t.themeDarkActive
                     : t.themeLightActive}
-              </p>
-            </div>
-            
-            {/* OpenWeather API Key Selection */}
-            <div className="space-y-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-              <Label className="text-sm font-medium">{t.apiKey}</Label>
-              <div className="flex gap-2">
-                <Input
-                  type="text"
-                  placeholder={t.apiKeyPlaceholder}
-                  value={apiKeyInput}
-                  onChange={(e) => setApiKeyInput(e.target.value)}
-                  onKeyDown={(e) => {
-                     if (e.key === 'Enter') {
-                       setOpenWeatherApiKey(apiKeyInput);
-                       localStorage.setItem('fieldmanager-weather-api-key', apiKeyInput);
-                     }
-                  }}
-                />
-                <Button 
-                  onClick={() => {
-                    setOpenWeatherApiKey(apiKeyInput);
-                    localStorage.setItem('fieldmanager-weather-api-key', apiKeyInput);
-                  }}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
-                >
-                  {t.applyBtn}
-                </Button>
-              </div>
-              <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                {t.apiKeyDesc}
               </p>
             </div>
           </div>

@@ -20,7 +20,9 @@ bun install
 ```
 
 Create `.env.local` with your OpenWeather API key (get a free one at
-[openweathermap.org](https://openweathermap.org/api)):
+[openweathermap.org](https://openweathermap.org/api)). This is the only place
+the key is configured — it is read on the server and never exposed to the
+browser, and the app has no in-app field for it:
 
 ```bash
 cp .env.example .env.local

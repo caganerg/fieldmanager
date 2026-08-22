@@ -2,8 +2,7 @@ export const t = {
   welcomeTitle: "Welcome to Field Manager!",
   howToUse: "How to Use?",
   howToUseDesc: "You can draw your fields on the map, enter crop information, and organize your fields by creating your own groups.",
-  weatherDesc: "An OpenWeather API key is required for weather features. If there is a key defined on the server, it will be used automatically. If you want to use your custom key, you can add it from the Settings menu (your key always takes precedence).",
-  apiKeyDesc: "Required for weather data. The key you enter here takes precedence over the server key. It is only stored in your browser (localStorage).",
+  weatherDesc: "Weather is served by the app itself. It works whenever an OpenWeather API key is configured on the server; there is nothing to set up here.",
   welcomeSubtitle: "Managing your fields and tracking weather is now very easy.",
   weatherFeature: "Weather Feature",
   startBtn: "Start",
@@ -32,9 +31,6 @@ export const t = {
   themeDesc: "Theme automatically changes based on your operating system's settings.",
   themeDarkActive: "Dark theme active. Reduces eye strain.",
   themeLightActive: "Light theme active.",
-  apiKey: "OpenWeather API Key",
-  apiKeyPlaceholder: "e.g., 1a2b3c4d5e...",
-  applyBtn: "Apply",
   
   aboutTitle: "About Field Manager",
   aboutDesc: "Digital solution for field and crop management.",
@@ -92,7 +88,6 @@ export const t = {
   weatherForecast: "5-Day Forecast",
   weatherToday: "TODAY",
   weatherRainCloud: "Rain / Cloud",
-  weatherApiKeyMissing: "API Key missing. Please enter your OpenWeather API key in settings.",
   weatherFetchError: "Could not fetch weather data.",
   
   fieldDefaultName: "Field",

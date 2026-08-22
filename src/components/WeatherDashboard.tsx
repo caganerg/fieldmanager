@@ -50,11 +50,10 @@ function getWeatherIcon(iconCode: string, className = "w-6 h-6") {
 interface WeatherDashboardProps {
   lat: number;
   lon: number;
-  apiKey?: string;
 }
 
-export default function WeatherDashboard({ lat, lon, apiKey }: WeatherDashboardProps) {
-  const { data, error, isLoading } = useSWR(`/api/weather?lat=${lat}&lon=${lon}${apiKey ? `&apiKey=${apiKey}` : ''}`, fetcher);
+export default function WeatherDashboard({ lat, lon }: WeatherDashboardProps) {
+  const { data, error, isLoading } = useSWR(`/api/weather?lat=${lat}&lon=${lon}`, fetcher);
 
   if (isLoading) {
     return (
