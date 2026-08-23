@@ -5,7 +5,48 @@ interface ForecastItem {
   [key: string]: unknown;
 }
 
+// This route is unauthenticated and open to anyone who can reach the server,
+// so a per-client cap keeps a single caller from burning through the shared
+// OpenWeather quota. In-memory is fine here: the app is deployed as a single
+// long-running process (see README), not across multiple serverless instances.
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 20;
+const requestCounts = new Map<string, { count: number; windowStart: number }>();
+
+function getClientKey(request: NextRequest): string {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (forwardedFor) return forwardedFor.split(",")[0].trim();
+  return request.headers.get("x-real-ip") || "unknown";
+}
+
+function isRateLimited(key: string): boolean {
+  const now = Date.now();
+  const entry = requestCounts.get(key);
+
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+    requestCounts.set(key, { count: 1, windowStart: now });
+    // Opportunistic sweep so the map doesn't grow unbounded over the life of
+    // the process when many distinct clients (or spoofed IPs) show up.
+    if (requestCounts.size > 5000) {
+      for (const [mapKey, mapEntry] of requestCounts) {
+        if (now - mapEntry.windowStart > RATE_LIMIT_WINDOW_MS) requestCounts.delete(mapKey);
+      }
+    }
+    return false;
+  }
+
+  entry.count += 1;
+  return entry.count > RATE_LIMIT_MAX_REQUESTS;
+}
+
 export async function GET(request: NextRequest) {
+  if (isRateLimited(getClientKey(request))) {
+    return NextResponse.json(
+      { error: "Too many weather requests. Please slow down and try again shortly." },
+      { status: 429, headers: { "Retry-After": "60" } }
+    );
+  }
+
   const searchParams = request.nextUrl.searchParams;
   const rawLat = searchParams.get("lat");
   const rawLon = searchParams.get("lon");
