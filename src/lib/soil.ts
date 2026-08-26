@@ -311,10 +311,10 @@ function readString(source: Record<string, unknown>, key: string): string {
 }
 
 /**
- * Records come back from localStorage, where an older version of the app — or a
- * hand-edited entry — may have left something unexpected. Anything without an
- * id is dropped; every other field falls back to blank so the UI never has to
- * guard each read.
+ * Records arrive from the stored document or from a request body, either of
+ * which may hold something unexpected — an older version of the app, a
+ * hand-edited file, a hostile payload. Anything without an id is dropped; every
+ * other field falls back to blank so the UI never has to guard each read.
  */
 export function sanitizeAnalyses(value: unknown): SoilAnalysis[] {
   if (!Array.isArray(value)) return [];

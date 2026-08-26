@@ -48,9 +48,10 @@ bun run lint    # eslint
 
 ## 💾 Where Your Data Lives
 
-Fields, groups, soil analyses, irrigation records and fertilization records are
-stored **on the server you install the app on**, in a single JSON file. The app
-writes it as you work — there is nothing to save, export or import by hand.
+Fields, groups, soil analyses, irrigation and fertilization records, the team
+list and the activity log are stored **on the server you install the app on**,
+in a single JSON file. The app writes it as you work — there is nothing to save,
+export or import by hand.
 
 By default the file is `./data/fieldmanager.json`, created on first save. Set
 `FIELDMANAGER_DATA_DIR` in `.env.local` to keep it somewhere else:
@@ -80,33 +81,9 @@ cp /var/lib/fieldmanager/fieldmanager.json ~/backups/fieldmanager-$(date +%F).js
 
 Restoring is the same copy in reverse, with the app stopped.
 
-<details>
-<summary>Loading a <code>tarla-verileri-*.json</code> file from an older version</summary>
-
-Earlier versions kept nothing on the server and offered Export / Import buttons
-instead. Those buttons are gone, but an exported file still holds the same
-`fields` and `groups` arrays, so it can be turned into a data file. With the app
-stopped:
-
-```bash
-bun -e '
-const old = await Bun.file(process.argv[1]).json();
-await Bun.write(process.argv[2], JSON.stringify({
-  version: 1, revision: 0, updatedAt: new Date().toISOString(),
-  fields: old.fields ?? [], groups: old.groups ?? [],
-  soilAnalyses: [], irrigationLogs: [], fertilizerLogs: [],
-}, null, 2));
-' tarla-verileri-2026-08-01.json /var/lib/fieldmanager/fieldmanager.json
-```
-
-Start the app again and the fields are there. Records kept in the browser by
-those versions — soil analyses, irrigation and fertilization logs — are picked
-up automatically the first time you open the app in that browser.
-
-</details>
-
-Theme, the tools pinned to the header and the welcome dialog stay in the
-browser, since they describe that browser rather than the farm.
+Theme, the tools pinned to the header, the welcome dialog and which team member
+the session is acting as stay in the browser, since they describe that browser
+rather than the workspace.
 
 ### ⚠️ There is no authentication
 

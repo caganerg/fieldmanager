@@ -22,6 +22,8 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { type FieldPolygon } from "@/components/Map";
+import { useFieldData } from "@/components/FieldDataProvider";
+import { DEFAULT_USERS, type ActivityItem, type UserMember } from "@/lib/team";
 import {
   Dialog,
   DialogContent,
@@ -33,29 +35,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export interface UserMember {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: "admin" | "agronomist" | "operator" | "viewer";
-  roleTitle: string;
-  initials: string;
-  status: "online" | "in_field" | "on_leave" | "offline";
-  statusText: string;
-  assignedFieldIds: string[]; // "all" or specific field ids
-  joinedDate: string;
-  lastActive: string;
-  color: string;
-}
-
-export interface ActivityItem {
-  id: string;
-  user: string;
-  action: string;
-  timestamp: number;
-  type?: "field_add" | "field_edit" | "field_delete" | "group_add" | "user_add" | "user_edit" | "import" | "default";
-}
+// The team and the activity log describe the workspace, not this browser, so
+// their shape and seed data live in `@/lib/team` and the records themselves in
+// the server document. Re-exported here because callers already import the
+// types from this module.
+export type { UserMember, ActivityItem };
 
 interface UsersMenuProps {
   fields?: FieldPolygon[];
@@ -65,24 +49,6 @@ interface UsersMenuProps {
   activeUserName?: string;
   onActiveUserChange?: (userName: string) => void;
 }
-
-const DEFAULT_USERS: UserMember[] = [
-  {
-    id: "u1",
-    name: "Guest",
-    email: "guest@fieldmanager.local",
-    phone: "+1 (555) 000-0000",
-    role: "admin",
-    roleTitle: "System Administrator (Admin)",
-    initials: "GU",
-    status: "online",
-    statusText: "Online",
-    assignedFieldIds: ["all"],
-    joinedDate: "01/01/2026",
-    lastActive: "Active now",
-    color: "bg-emerald-600 text-white",
-  },
-];
 
 function formatRelativeTime(timestamp: number): string {
   const now = Date.now();
@@ -113,31 +79,8 @@ export default function UsersMenu({
 
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Users state with local storage persistence
-  const [users, setUsers] = useState<UserMember[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("fieldmanager-users");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const validUsers = parsed.filter(
-              (u: UserMember) => u && typeof u.id === "string" && typeof u.name === "string"
-            );
-            if (validUsers.length > 0) return validUsers;
-          }
-        } catch (e) {
-          console.error("Error reading saved users:", e);
-        }
-      }
-    }
-    return DEFAULT_USERS;
-  });
-
-  // Save users to localStorage
-  useEffect(() => {
-    localStorage.setItem("fieldmanager-users", JSON.stringify(users));
-  }, [users]);
+  // The team is workspace data, so it comes from the server-backed store.
+  const { users, setUsers } = useFieldData();
 
   // Add User Form State
   const [newUserForm, setNewUserForm] = useState({
@@ -191,7 +134,11 @@ export default function UsersMenu({
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const currentUser = users.find((u) => u.id === activeUserId) || users[0];
+  // Falls back to the seed member so the panel still renders if the team list
+  // is empty — while the document is loading, or after the last member is
+  // removed — rather than dereferencing undefined.
+  const currentUser =
+    users.find((u) => u.id === activeUserId) || users[0] || DEFAULT_USERS[0];
 
   const getRoleBadgeStyle = (role: string) => {
     switch (role) {

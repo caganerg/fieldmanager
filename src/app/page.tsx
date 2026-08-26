@@ -19,6 +19,8 @@ import type { LatLngTuple } from "leaflet";
 import ToolsBar from "@/components/ToolsBar";
 import UsersMenu, { type ActivityItem } from "@/components/UsersMenu";
 import FieldDataProvider, { useFieldData } from "@/components/FieldDataProvider";
+import { ACTIVITY_LIMIT } from "@/lib/team";
+import { createId } from "@/lib/utils";
 import { t } from "@/lib/translations";
 
 // Dynamically import Map with SSR disabled since Leaflet requires window/document
@@ -62,6 +64,8 @@ function Dashboard() {
     setFields,
     groups,
     setGroups,
+    activities,
+    setActivities,
     status: syncStatus,
     error: syncError,
     ready: dataReady,
@@ -91,9 +95,9 @@ function Dashboard() {
   // Theme State
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
 
-  // User & Activity State
+  // Which team member this browser is acting as. Unlike the team itself, this
+  // is a per-session choice, so it stays out of the server document.
   const [activeUserName, setActiveUserName] = useState("Guest");
-  const [activities, setActivities] = useState<ActivityItem[]>([]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -115,44 +119,6 @@ function Dashboard() {
     // The weather key now lives only in the server environment. Drop any copy
     // left in this browser by an earlier version.
     localStorage.removeItem('fieldmanager-weather-api-key');
-
-    // Load saved activities
-    const savedActivities = localStorage.getItem('fieldmanager-activities');
-    if (savedActivities) {
-      try {
-        const parsed = JSON.parse(savedActivities);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const validActivities = parsed.filter(
-            (a: ActivityItem) => a && typeof a.id === "string" && typeof a.action === "string"
-          );
-          if (validActivities.length > 0) {
-            setActivities(validActivities);
-          }
-        } else {
-          setActivities([
-            {
-              id: "act-init",
-              user: "Guest",
-              action: "Workspace initialized and ready",
-              timestamp: Date.now() - 1000 * 60 * 5,
-              type: "default",
-            },
-          ]);
-        }
-      } catch {
-        // fallback
-      }
-    } else {
-      setActivities([
-        {
-          id: "act-init",
-          user: "Guest",
-          action: "Workspace initialized and ready",
-          timestamp: Date.now() - 1000 * 60 * 5,
-          type: "default",
-        },
-      ]);
-    }
 
     // Check if first visit for welcome modal
     const hasWelcomed = localStorage.getItem('fieldmanager-welcomed');
@@ -193,27 +159,18 @@ function Dashboard() {
 
   const addActivity = useCallback((action: string, type: ActivityItem["type"] = "default") => {
     const newAct: ActivityItem = {
-      id: "act-" + Math.random().toString(36).substr(2, 9),
+      id: "act-" + createId(),
       user: activeUserName,
       action,
       timestamp: Date.now(),
       type,
     };
-    setActivities(prev => {
-      const updated = [newAct, ...prev.slice(0, 49)];
-      if (typeof window !== "undefined") {
-        localStorage.setItem("fieldmanager-activities", JSON.stringify(updated));
-      }
-      return updated;
-    });
-  }, [activeUserName]);
+    setActivities(prev => [newAct, ...prev].slice(0, ACTIVITY_LIMIT));
+  }, [activeUserName, setActivities]);
 
   const clearActivities = useCallback(() => {
     setActivities([]);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("fieldmanager-activities", JSON.stringify([]));
-    }
-  }, []);
+  }, [setActivities]);
 
   const handlePolygonCreated = (coordinates: LatLngTuple[]) => {
     // Once polygon is drawn, stop drawing mode and open the new field form

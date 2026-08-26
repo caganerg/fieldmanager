@@ -22,6 +22,12 @@ import {
   type StoredField,
 } from "@/lib/field-data";
 import { type SoilAnalysis } from "@/lib/soil";
+import {
+  DEFAULT_USERS,
+  defaultActivity,
+  type ActivityItem,
+  type UserMember,
+} from "@/lib/team";
 
 /**
  * Owns everything the server keeps: the fields and groups themselves plus the
@@ -41,6 +47,8 @@ const LEGACY_KEYS = {
   soilAnalyses: "fieldmanager-soil-analyses",
   irrigationLogs: "fieldmanager-irrigation-logs",
   fertilizerLogs: "fieldmanager-fertilizer-logs",
+  users: "fieldmanager-users",
+  activities: "fieldmanager-activities",
 } as const;
 
 export type SyncStatus = "loading" | "idle" | "saving" | "error";
@@ -64,6 +72,10 @@ interface FieldDataContextValue {
   setIrrigationLogs: Dispatch<SetStateAction<IrrigationLog[]>>;
   fertilizerLogs: FertilizerLog[];
   setFertilizerLogs: Dispatch<SetStateAction<FertilizerLog[]>>;
+  users: UserMember[];
+  setUsers: Dispatch<SetStateAction<UserMember[]>>;
+  activities: ActivityItem[];
+  setActivities: Dispatch<SetStateAction<ActivityItem[]>>;
 }
 
 const FieldDataContext = createContext<FieldDataContextValue | null>(null);
@@ -121,38 +133,46 @@ function readLegacy<T>(key: string): T[] {
 }
 
 /**
- * Earlier versions kept the module records in this browser. If the server has
- * none of a given kind and this browser does, adopt them once so upgrading
- * doesn't look like the records were lost, then clear the local copy.
+ * Fills in the slices the server had nothing for.
+ *
+ * Two sources, in order. Earlier versions kept these records in this browser,
+ * so an empty slice adopts the local copy once — upgrading should not look like
+ * the records were lost. Failing that, the team and the activity log fall back
+ * to their seeds, the way they did when they were read from localStorage, so a
+ * fresh workspace is never a blank screen.
+ *
+ * `changed` says whether the result differs from what the server sent, which is
+ * what decides if loading should be followed by a write.
  */
-function migrateLocalRecords(data: FieldData): { data: FieldData; migrated: boolean } {
-  if (typeof window === "undefined") return { data, migrated: false };
-  let migrated = false;
+function prepareLoadedData(data: FieldData): { data: FieldData; changed: boolean } {
+  if (typeof window === "undefined") return { data, changed: false };
+  let changed = false;
   const next = { ...data };
 
-  if (next.soilAnalyses.length === 0) {
-    const local = readLegacy<SoilAnalysis>(LEGACY_KEYS.soilAnalyses);
-    if (local.length > 0) {
-      next.soilAnalyses = local;
-      migrated = true;
-    }
+  const adopt = <K extends keyof FieldData>(key: K, legacyKey: string) => {
+    if (next[key].length > 0) return;
+    const local = readLegacy<FieldData[K][number]>(legacyKey);
+    if (local.length === 0) return;
+    next[key] = local as FieldData[K];
+    changed = true;
+  };
+
+  adopt("soilAnalyses", LEGACY_KEYS.soilAnalyses);
+  adopt("irrigationLogs", LEGACY_KEYS.irrigationLogs);
+  adopt("fertilizerLogs", LEGACY_KEYS.fertilizerLogs);
+  adopt("users", LEGACY_KEYS.users);
+  adopt("activities", LEGACY_KEYS.activities);
+
+  if (next.users.length === 0) {
+    next.users = DEFAULT_USERS;
+    changed = true;
   }
-  if (next.irrigationLogs.length === 0) {
-    const local = readLegacy<IrrigationLog>(LEGACY_KEYS.irrigationLogs);
-    if (local.length > 0) {
-      next.irrigationLogs = local;
-      migrated = true;
-    }
-  }
-  if (next.fertilizerLogs.length === 0) {
-    const local = readLegacy<FertilizerLog>(LEGACY_KEYS.fertilizerLogs);
-    if (local.length > 0) {
-      next.fertilizerLogs = local;
-      migrated = true;
-    }
+  if (next.activities.length === 0) {
+    next.activities = [defaultActivity()];
+    changed = true;
   }
 
-  return { data: next, migrated };
+  return { data: next, changed };
 }
 
 function clearLegacyKeys() {
@@ -171,6 +191,11 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
   const [soilAnalyses, setSoilAnalyses] = useState<SoilAnalysis[]>([]);
   const [irrigationLogs, setIrrigationLogs] = useState<IrrigationLog[]>([]);
   const [fertilizerLogs, setFertilizerLogs] = useState<FertilizerLog[]>([]);
+  // Seeded rather than empty so the server render and the first client render
+  // agree, and so the team panel always has somebody to show while the document
+  // is still in flight. The loaded document replaces this.
+  const [users, setUsers] = useState<UserMember[]>(DEFAULT_USERS);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
 
   const [ready, setReady] = useState(false);
   const [status, setStatus] = useState<SyncStatus>("loading");
@@ -192,6 +217,8 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
     setSoilAnalyses(document.soilAnalyses);
     setIrrigationLogs(document.irrigationLogs);
     setFertilizerLogs(document.fertilizerLogs);
+    setUsers(document.users);
+    setActivities(document.activities);
   }, []);
 
   useEffect(() => {
@@ -208,12 +235,12 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
         const document = (await response.json()) as StoredDocument;
         if (cancelled) return;
 
-        const { data, migrated } = migrateLocalRecords(document);
+        const { data, changed } = prepareLoadedData(document);
         applyDocument({ ...document, ...data });
-        // A migration is the one case where loading should be followed by a
-        // write, so the adopted records reach the server.
-        skipNextSaveRef.current = !migrated;
-        pendingMigrationRef.current = migrated;
+        // Adopted or seeded records are the one case where loading should be
+        // followed by a write, so they reach the server.
+        skipNextSaveRef.current = !changed;
+        pendingMigrationRef.current = changed;
         setError(null);
         setStatus("idle");
         setReady(true);
@@ -246,6 +273,8 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
       soilAnalyses,
       irrigationLogs,
       fertilizerLogs,
+      users,
+      activities,
     };
 
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -293,7 +322,17 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
-  }, [ready, fields, groups, soilAnalyses, irrigationLogs, fertilizerLogs, applyDocument]);
+  }, [
+    ready,
+    fields,
+    groups,
+    soilAnalyses,
+    irrigationLogs,
+    fertilizerLogs,
+    users,
+    activities,
+    applyDocument,
+  ]);
 
   const retry = useCallback(() => {
     if (ready) {
@@ -326,6 +365,10 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
         setIrrigationLogs,
         fertilizerLogs,
         setFertilizerLogs,
+        users,
+        setUsers,
+        activities,
+        setActivities,
       }}
     >
       {children}

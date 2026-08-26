@@ -59,16 +59,23 @@ add it back.
 
 ## Field data lives on the server
 
-Fields, groups, soil analyses and the irrigation/fertilization records are kept
-in one JSON file on the host, written through `src/app/api/data/route.ts` and
-`src/lib/server/data-store.ts`. `FIELDMANAGER_DATA_DIR` selects the directory
-and defaults to `./data`, which is gitignored.
+Fields, groups, soil analyses, the irrigation/fertilization records, the team
+list and the activity log are kept in one JSON file on the host, written through
+`src/app/api/data/route.ts` and `src/lib/server/data-store.ts`.
+`FIELDMANAGER_DATA_DIR` selects the directory and defaults to `./data`, which is
+gitignored.
 
 `src/components/FieldDataProvider.tsx` is the single client-side owner of that
 document: it loads once, hands the slices out through `useFieldData()`, and
-writes the whole thing back debounced. Components must not persist field data to
-`localStorage` — browser storage is only for things that describe the browser
-(theme, pinned tools, the welcome flag).
+writes the whole thing back debounced. Components must not persist workspace
+data to `localStorage` — browser storage is only for things that describe the
+browser (theme, pinned tools, the welcome flag, which member the session acts
+as).
+
+`src/lib/team.ts` holds the `UserMember` and `ActivityItem` types plus their
+seed data. They live there rather than in `UsersMenu.tsx` so the provider and
+`field-data.ts` can import them without a cycle — `UsersMenu` reads its data
+from the provider.
 
 There is no manual export or import, and no file-download or file-upload path.
 That was removed deliberately when the server store landed; the backup story is
