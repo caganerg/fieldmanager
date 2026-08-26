@@ -210,6 +210,15 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
   const skipNextSaveRef = useRef(false);
   const pendingMigrationRef = useRef(false);
 
+  // Mirrors what is on screen, so the load can tell whether anything was drawn
+  // while the request was still in flight. Kept in an effect rather than
+  // written during render, and only read from an async callback, by which time
+  // it has caught up.
+  const latestRef = useRef({ fields, groups });
+  useEffect(() => {
+    latestRef.current = { fields, groups };
+  }, [fields, groups]);
+
   const applyDocument = useCallback((document: StoredDocument) => {
     revisionRef.current = document.revision;
     setFields(document.fields.map(toFieldPolygon));
@@ -236,10 +245,23 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
         if (cancelled) return;
 
         const { data, changed } = prepareLoadedData(document);
+
+        // A field drawn before the document arrived has no counterpart on the
+        // server. Carry it over instead of dropping it, so the load is never
+        // destructive and the map stays usable while the request is in flight.
+        const knownFields = new Set(data.fields.map((field) => field.id));
+        const knownGroups = new Set(data.groups.map((group) => group.id));
+        const localFields = latestRef.current.fields.filter((f) => !knownFields.has(f.id));
+        const localGroups = latestRef.current.groups.filter((g) => !knownGroups.has(g.id));
+
         applyDocument({ ...document, ...data });
-        // Adopted or seeded records are the one case where loading should be
-        // followed by a write, so they reach the server.
-        skipNextSaveRef.current = !changed;
+        if (localFields.length > 0) setFields((prev) => [...prev, ...localFields]);
+        if (localGroups.length > 0) setGroups((prev) => [...prev, ...localGroups]);
+
+        // Adopted records, seeded defaults and carried-over edits are the cases
+        // where loading should be followed by a write, so they reach the server.
+        const carried = localFields.length > 0 || localGroups.length > 0;
+        skipNextSaveRef.current = !(changed || carried);
         pendingMigrationRef.current = changed;
         setError(null);
         setStatus("idle");

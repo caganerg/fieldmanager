@@ -417,9 +417,10 @@ function Dashboard() {
           ) : (
             <Button
               variant="default"
-              // Drawing before the stored data arrives would have the new field
-              // wiped out the moment the server copy lands.
-              disabled={!dataReady}
+              // Deliberately not disabled while the document loads. Tying an
+              // SSR-rendered attribute to client-only load state bakes a
+              // disabled button into the prerendered HTML and flashes on every
+              // visit; the provider keeps anything drawn early instead.
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
               onClick={() => {
                 setIsDrawingMode(true);
