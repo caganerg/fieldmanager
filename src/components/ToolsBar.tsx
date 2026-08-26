@@ -26,6 +26,7 @@ import { DEFAULT_CENTER } from "@/lib/map-constants";
 import { getPolygonCenter } from "@/lib/geo";
 import { createId } from "@/lib/utils";
 import WeatherDashboard from "@/components/WeatherDashboard";
+import IrrigationDialog from "@/components/IrrigationDialog";
 import SoilAnalysisDialog from "@/components/SoilAnalysisDialog";
 import { useFieldData } from "@/components/FieldDataProvider";
 import {
@@ -73,7 +74,7 @@ const TOOL_ITEMS = [
     accent: "text-sky-500 dark:text-sky-400",
     color: "text-sky-500 bg-sky-50 dark:bg-sky-950/50 border-sky-200 dark:border-sky-800/80 hover:border-sky-400",
     badgeColor: "bg-sky-100 text-sky-700 dark:bg-sky-900/60 dark:text-sky-300",
-    status: t.inDevelopment,
+    status: t.activeStatus,
   },
   {
     id: "fertilizer",
@@ -195,16 +196,9 @@ export default function ToolsBar({
     }
   }, [pinnedIds, pinnedLoaded]);
 
-  // Irrigation and fertilizer records are part of the field data the server
-  // keeps, so they come from the provider rather than from this browser.
-  const { irrigationLogs, setIrrigationLogs, fertilizerLogs, setFertilizerLogs } = useFieldData();
-
-  const [newIrrigation, setNewIrrigation] = useState({
-    fieldId: selectedFieldId || fields[0]?.id || "",
-    amount: "20",
-    method: "Drip Irrigation",
-    date: new Date().toISOString().split("T")[0],
-  });
+  // Fertilizer records are part of the field data the server keeps, so they
+  // come from the provider rather than from this browser.
+  const { fertilizerLogs, setFertilizerLogs } = useFieldData();
 
   const [newFertilizer, setNewFertilizer] = useState({
     fieldId: selectedFieldId || fields[0]?.id || "",
@@ -248,12 +242,11 @@ export default function ToolsBar({
       return;
     }
     setOpenPanel(null);
-    // Point the record forms at whatever field is selected right now. They used
+    // Point the fertilizer form at whatever field is selected right now. It used
     // to keep the id captured when the component first mounted, so opening the
-    // dialog after picking a different field still showed the old one.
-    if (id === "irrigation") {
-      setNewIrrigation((prev) => ({ ...prev, fieldId: defaultFieldId }));
-    } else if (id === "fertilizer") {
+    // dialog after picking a different field still showed the old one. The
+    // irrigation dialog does the same for itself when it opens.
+    if (id === "fertilizer") {
       setNewFertilizer((prev) => ({ ...prev, fieldId: defaultFieldId }));
     }
     setActiveModal(id);
@@ -362,22 +355,6 @@ export default function ToolsBar({
       />
     </div>
   );
-
-  const handleAddIrrigation = (e: React.FormEvent) => {
-    e.preventDefault();
-    const field = fields.find((f) => f.id === newIrrigation.fieldId) || fields[0];
-    if (!field) return;
-    setIrrigationLogs((prev) => [
-      {
-        id: createId(),
-        fieldName: field.name,
-        date: newIrrigation.date,
-        amount: `${newIrrigation.amount} m³`,
-        method: newIrrigation.method,
-      },
-      ...prev,
-    ]);
-  };
 
   const handleAddFertilizer = (e: React.FormEvent) => {
     e.preventDefault();
@@ -614,142 +591,13 @@ export default function ToolsBar({
 
       {/* Feature Modals for Upcoming / Extensible Modules */}
       
-      {/* 1. Irrigation Modal */}
-      <Dialog open={activeModal === "irrigation"} onOpenChange={(open) => !open && setActiveModal(null)}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-sky-600 dark:text-sky-400">
-              <Droplets className="w-5 h-5" />
-              {t.featureIrrigation}
-            </DialogTitle>
-            <DialogDescription>
-              {t.featureIrrigationDesc}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            {/* Quick Add Irrigation Log Form */}
-            <form onSubmit={handleAddIrrigation} className="p-3.5 bg-sky-50/60 dark:bg-sky-950/30 rounded-xl border border-sky-100 dark:border-sky-900/50 space-y-3">
-              <h4 className="text-xs font-bold text-sky-800 dark:text-sky-300 uppercase tracking-wide flex items-center gap-1.5">
-                <Plus className="w-3.5 h-3.5" />
-                {t.logAddIrrigation}
-              </h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">
-                    {t.logField}
-                  </Label>
-                  <select
-                    className="w-full text-xs rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2 py-1.5 text-zinc-800 dark:text-zinc-200 outline-none disabled:opacity-60"
-                    value={newIrrigation.fieldId}
-                    disabled={!hasFields}
-                    onChange={(e) => setNewIrrigation({ ...newIrrigation, fieldId: e.target.value })}
-                  >
-                    {hasFields ? (
-                      fields.map((f) => (
-                        <option key={f.id} value={f.id}>
-                          {f.name}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="">{t.logNoFields}</option>
-                    )}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">
-                    {t.logIrrigationAmount}
-                  </Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="any"
-                    className="h-8 text-xs bg-white dark:bg-zinc-900"
-                    placeholder="25"
-                    value={newIrrigation.amount}
-                    onChange={(e) => setNewIrrigation({ ...newIrrigation, amount: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">
-                    {t.logIrrigationMethod}
-                  </Label>
-                  <select
-                    className="w-full text-xs rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2 py-1.5 text-zinc-800 dark:text-zinc-200 outline-none"
-                    value={newIrrigation.method}
-                    onChange={(e) => setNewIrrigation({ ...newIrrigation, method: e.target.value })}
-                  >
-                    <option value="Drip Irrigation">Drip Irrigation</option>
-                    <option value="Sprinkler">Sprinkler</option>
-                    <option value="Flood / Furrow">Flood / Furrow</option>
-                    <option value="Center Pivot">Center Pivot</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">
-                    {t.logDate}
-                  </Label>
-                  <Input
-                    type="date"
-                    className="h-8 text-xs bg-white dark:bg-zinc-900"
-                    value={newIrrigation.date}
-                    onChange={(e) => setNewIrrigation({ ...newIrrigation, date: e.target.value })}
-                  />
-                </div>
-              </div>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={!hasFields}
-                className="w-full bg-sky-600 hover:bg-sky-700 text-white text-xs h-8"
-              >
-                {t.logSave}
-              </Button>
-              {!hasFields && (
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 text-center">{t.logNeedsField}</p>
-              )}
-            </form>
-
-            {/* Recent Logs List */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-                {t.logRecentIrrigation}
-              </h4>
-              <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                {irrigationLogs.length === 0 ? (
-                  <div className="p-4 text-center text-xs text-zinc-400 bg-zinc-50/50 dark:bg-zinc-900/50 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-800">
-                    {t.logEmptyIrrigation}
-                  </div>
-                ) : (
-                  irrigationLogs.map((log) => (
-                    <div key={log.id} className="group flex items-center justify-between gap-2 p-2.5 rounded-lg border bg-zinc-50/50 dark:bg-zinc-900/50 text-xs">
-                      <div className="min-w-0">
-                        <span className="font-semibold text-zinc-800 dark:text-zinc-200">{log.fieldName}</span>
-                        <span className="text-zinc-400 ml-2">({log.method})</span>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="font-medium text-sky-600 dark:text-sky-400">{log.amount}</span>
-                        <span className="text-zinc-400">{log.date}</span>
-                        <button
-                          type="button"
-                          onClick={() => setIrrigationLogs((prev) => prev.filter((l) => l.id !== log.id))}
-                          title={t.logDelete}
-                          aria-label={t.logDelete}
-                          className="p-1 rounded-md text-zinc-300 dark:text-zinc-600 hover:text-rose-500 dark:hover:text-rose-400 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* 1. Irrigation */}
+      <IrrigationDialog
+        open={activeModal === "irrigation"}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        fields={fields}
+        selectedFieldId={selectedFieldId}
+      />
 
       {/* 2. Fertilization Modal */}
       <Dialog open={activeModal === "fertilizer"} onOpenChange={(open) => !open && setActiveModal(null)}>

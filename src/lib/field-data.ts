@@ -1,3 +1,4 @@
+import { sanitizeIrrigationLogs, type IrrigationLog } from "@/lib/irrigation";
 import { sanitizeAnalyses, type SoilAnalysis } from "@/lib/soil";
 import {
   ACTIVITY_LIMIT,
@@ -55,14 +56,6 @@ export interface StoredField {
 export interface StoredGroup {
   id: string;
   name: string;
-}
-
-export interface IrrigationLog {
-  id: string;
-  fieldName: string;
-  date: string;
-  amount: string;
-  method: string;
 }
 
 export interface FertilizerLog {
@@ -199,16 +192,6 @@ function sanitizeLogs<T extends { id: string }>(
   return result;
 }
 
-export function sanitizeIrrigationLogs(value: unknown): IrrigationLog[] {
-  return sanitizeLogs<IrrigationLog>(value, LIMITS.irrigationLogs, (source, id) => ({
-    id,
-    fieldName: text(source.fieldName, MAX_NAME),
-    date: text(source.date, 32),
-    amount: text(source.amount, 32),
-    method: text(source.method, MAX_NAME),
-  }));
-}
-
 export function sanitizeFertilizerLogs(value: unknown): FertilizerLog[] {
   return sanitizeLogs<FertilizerLog>(value, LIMITS.fertilizerLogs, (source, id) => ({
     id,
@@ -286,7 +269,7 @@ export function sanitizeData(value: unknown): FieldData {
     fields: sanitizeFields(source.fields),
     groups: sanitizeGroups(source.groups),
     soilAnalyses: sanitizeAnalyses(source.soilAnalyses).slice(0, LIMITS.soilAnalyses),
-    irrigationLogs: sanitizeIrrigationLogs(source.irrigationLogs),
+    irrigationLogs: sanitizeIrrigationLogs(source.irrigationLogs).slice(0, LIMITS.irrigationLogs),
     fertilizerLogs: sanitizeFertilizerLogs(source.fertilizerLogs),
     users: sanitizeUsers(source.users),
     activities: sanitizeActivities(source.activities),
@@ -305,4 +288,4 @@ export function sanitizeDocument(value: unknown): StoredDocument {
   };
 }
 
-export type { SoilAnalysis };
+export type { IrrigationLog, SoilAnalysis };

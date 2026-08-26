@@ -21,6 +21,7 @@ import UsersMenu, { type ActivityItem } from "@/components/UsersMenu";
 import FieldDataProvider, { useFieldData } from "@/components/FieldDataProvider";
 import { ACTIVITY_LIMIT } from "@/lib/team";
 import { createId } from "@/lib/utils";
+import { getPolygonArea } from "@/lib/geo";
 import { t } from "@/lib/translations";
 
 // Dynamically import Map with SSR disabled since Leaflet requires window/document
@@ -28,31 +29,6 @@ const Map = dynamic(() => import("@/components/Map"), {
   ssr: false,
   loading: () => <div className="w-full h-full flex flex-col items-center justify-center text-zinc-500 bg-zinc-100 dark:bg-zinc-900 absolute inset-0">Loading map...</div>
 });
-
-// Calculate polygon area in square meters from LatLngTuple coordinates
-// Uses the Shoelace formula on a spherical Earth approximation
-function calculatePolygonArea(coordinates: LatLngTuple[]): number {
-  if (coordinates.length < 3) return 0;
-
-  const EARTH_RADIUS = 6371000; // meters
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-
-  let area = 0;
-  const n = coordinates.length;
-
-  for (let i = 0; i < n; i++) {
-    const j = (i + 1) % n;
-    const lat1 = toRad(coordinates[i][0]);
-    const lng1 = toRad(coordinates[i][1]);
-    const lat2 = toRad(coordinates[j][0]);
-    const lng2 = toRad(coordinates[j][1]);
-
-    area += (lng2 - lng1) * (2 + Math.sin(lat1) + Math.sin(lat2));
-  }
-
-  area = Math.abs((area * EARTH_RADIUS * EARTH_RADIUS) / 2);
-  return area;
-}
 
 function Dashboard() {
   const [isMounted, setIsMounted] = useState(false);
@@ -853,7 +829,7 @@ function Dashboard() {
                 {(selectedFieldId || pendingCoordinates) && (() => {
                   const coords = pendingCoordinates || fields.find(f => f.id === selectedFieldId)?.coordinates;
                   if (!coords || coords.length < 3) return null;
-                  const areaM2 = calculatePolygonArea(coords);
+                  const areaM2 = getPolygonArea(coords);
                   const areaDekar = areaM2 / 1000;
                   return (
                     <div className="rounded-xl bg-emerald-50 dark:bg-emerald-900/15 border border-emerald-200 dark:border-emerald-800/50 p-4">
