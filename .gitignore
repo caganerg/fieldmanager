@@ -13,6 +13,9 @@
 # production
 /build
 
+# field data written by the app at runtime (see FIELDMANAGER_DATA_DIR in README)
+/data
+
 # misc
 .DS_Store
 *.pem

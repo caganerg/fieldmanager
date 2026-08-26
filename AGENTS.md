@@ -56,3 +56,30 @@ The key is read from the server environment only. The route deliberately does
 not accept a key from the request, and there is no settings field for one —
 that path used to put a secret in `localStorage` and in request URLs. Do not
 add it back.
+
+## Field data lives on the server
+
+Fields, groups, soil analyses and the irrigation/fertilization records are kept
+in one JSON file on the host, written through `src/app/api/data/route.ts` and
+`src/lib/server/data-store.ts`. `FIELDMANAGER_DATA_DIR` selects the directory
+and defaults to `./data`, which is gitignored.
+
+`src/components/FieldDataProvider.tsx` is the single client-side owner of that
+document: it loads once, hands the slices out through `useFieldData()`, and
+writes the whole thing back debounced. Components must not persist field data to
+`localStorage` — browser storage is only for things that describe the browser
+(theme, pinned tools, the welcome flag).
+
+There is no manual export or import, and no file-download or file-upload path.
+That was removed deliberately when the server store landed; the backup story is
+copying the JSON file, which is documented in `README.md`. Do not add it back.
+
+Writes are guarded by a `revision` counter: a `PUT` carrying a stale revision is
+rejected with `409` and the current document, which the provider then adopts.
+Keep that check if you touch the route — it is what stops a second tab from
+silently overwriting the first.
+
+`src/lib/field-data.ts` holds the shared shape and the sanitisers, and is
+deliberately isomorphic: no `node:fs`, no Leaflet, so the route, the store and
+the browser all validate against one definition. Anything reaching the store
+goes through `sanitizeData`.

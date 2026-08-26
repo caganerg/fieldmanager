@@ -46,6 +46,83 @@ bun run start   # serve the production build
 bun run lint    # eslint
 ```
 
+## 💾 Where Your Data Lives
+
+Fields, groups, soil analyses, irrigation records and fertilization records are
+stored **on the server you install the app on**, in a single JSON file. The app
+writes it as you work — there is nothing to save, export or import by hand.
+
+By default the file is `./data/fieldmanager.json`, created on first save. Set
+`FIELDMANAGER_DATA_DIR` in `.env.local` to keep it somewhere else:
+
+```bash
+FIELDMANAGER_DATA_DIR=/var/lib/fieldmanager
+```
+
+Point it outside the project directory if you deploy by replacing the checkout,
+so the data is not wiped along with the old build:
+
+```bash
+sudo mkdir -p /var/lib/fieldmanager
+sudo chown "$USER" /var/lib/fieldmanager
+```
+
+The directory must be writable by the user the app runs as (the `User=` in the
+systemd unit below). The file is written with `0600` permissions, and each save
+goes to a temporary file that is renamed over the target, so an interrupted
+write cannot leave a half-written file behind.
+
+**Backups** are a file copy — put this in a cron job or a systemd timer:
+
+```bash
+cp /var/lib/fieldmanager/fieldmanager.json ~/backups/fieldmanager-$(date +%F).json
+```
+
+Restoring is the same copy in reverse, with the app stopped.
+
+<details>
+<summary>Loading a <code>tarla-verileri-*.json</code> file from an older version</summary>
+
+Earlier versions kept nothing on the server and offered Export / Import buttons
+instead. Those buttons are gone, but an exported file still holds the same
+`fields` and `groups` arrays, so it can be turned into a data file. With the app
+stopped:
+
+```bash
+bun -e '
+const old = await Bun.file(process.argv[1]).json();
+await Bun.write(process.argv[2], JSON.stringify({
+  version: 1, revision: 0, updatedAt: new Date().toISOString(),
+  fields: old.fields ?? [], groups: old.groups ?? [],
+  soilAnalyses: [], irrigationLogs: [], fertilizerLogs: [],
+}, null, 2));
+' tarla-verileri-2026-08-01.json /var/lib/fieldmanager/fieldmanager.json
+```
+
+Start the app again and the fields are there. Records kept in the browser by
+those versions — soil analyses, irrigation and fertilization logs — are picked
+up automatically the first time you open the app in that browser.
+
+</details>
+
+Theme, the tools pinned to the header and the welcome dialog stay in the
+browser, since they describe that browser rather than the farm.
+
+### ⚠️ There is no authentication
+
+The app ships without any login, and the API that reads and writes the data file
+is open to anyone who can reach the port. Run it on a trusted network, or put an
+authenticating reverse proxy in front of it. Do not expose the port straight to
+the internet.
+
+Binding to the loopback interface and reaching it over an SSH tunnel or a VPN is
+the simplest safe setup. Pass the host to `next start`; it listens on every
+interface otherwise, and the `HOSTNAME` environment variable is ignored:
+
+```bash
+bun run start -H 127.0.0.1
+```
+
 ## 🚀 Running in Production
 
 Build the app and serve it:
@@ -76,9 +153,19 @@ Restart=on-failure
 RestartSec=5
 Environment=NODE_ENV=production
 Environment=PORT=3000
+Environment=FIELDMANAGER_DATA_DIR=/var/lib/fieldmanager
 
 [Install]
 WantedBy=multi-user.target
+```
+
+Create the data directory first and give it to the same user, or the app will
+have nowhere to write:
+
+```bash
+sudo mkdir -p /var/lib/fieldmanager
+sudo chown USER /var/lib/fieldmanager
+sudo chmod 700 /var/lib/fieldmanager
 ```
 
 Then enable and start it:

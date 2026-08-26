@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 
-import { Trees, MapPin, Settings, Trash2, Edit2, ChevronRight, ChevronDown, Save, X, Plus, Folder, FolderOpen, GripVertical, Palette, Download, Upload, Info, Sun, Moon, Monitor } from "lucide-react";
+import { Trees, MapPin, Settings, Trash2, Edit2, ChevronRight, ChevronDown, Save, X, Plus, Folder, FolderOpen, GripVertical, Palette, Info, Sun, Moon, Monitor, Cloud, CloudOff, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,6 +18,7 @@ import { type FieldPolygon } from "@/components/Map";
 import type { LatLngTuple } from "leaflet";
 import ToolsBar from "@/components/ToolsBar";
 import UsersMenu, { type ActivityItem } from "@/components/UsersMenu";
+import FieldDataProvider, { useFieldData } from "@/components/FieldDataProvider";
 import { t } from "@/lib/translations";
 
 // Dynamically import Map with SSR disabled since Leaflet requires window/document
@@ -51,12 +52,24 @@ function calculatePolygonArea(coordinates: LatLngTuple[]): number {
   return area;
 }
 
-export default function Dashboard() {
+function Dashboard() {
   const [isMounted, setIsMounted] = useState(false);
 
-  // App State
-  const [fields, setFields] = useState<FieldPolygon[]>([]);
-  const [groups, setGroups] = useState<{ id: string, name: string }[]>([]);
+  // Fields and groups live on the server now; the provider loads them once and
+  // writes every change back. Everything below is view state that stays here.
+  const {
+    fields,
+    setFields,
+    groups,
+    setGroups,
+    status: syncStatus,
+    error: syncError,
+    ready: dataReady,
+    reloadedFromServer,
+    dismissReloadNotice,
+    retry: retrySync,
+  } = useFieldData();
+
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [pendingCoordinates, setPendingCoordinates] = useState<LatLngTuple[] | null>(null);
@@ -91,10 +104,6 @@ export default function Dashboard() {
     groupId: "unassigned",
     color: ""
   });
-
-  // Reference for hidden file input
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -393,7 +402,7 @@ export default function Dashboard() {
     setDragItem(null);
     setDragOverItem(null);
     setDragOverGroup(null);
-  }, [dragItem, groups, fields]);
+  }, [dragItem, groups, fields, setFields, setGroups]);
 
   const handleFieldDragOver = useCallback((e: React.DragEvent, fieldId: string) => {
     e.preventDefault();
@@ -421,104 +430,7 @@ export default function Dashboard() {
     setDragItem(null);
     setDragOverItem(null);
     setDragOverGroup(null);
-  }, [dragItem, fields]);
-
-  // --- Export / Import Handlers ---
-  const handleExportData = () => {
-    const data = {
-      version: 1,
-      timestamp: new Date().toISOString(),
-      fields,
-      groups
-    };
-
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `tarla-verileri-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const content = event.target?.result as string;
-        const data = JSON.parse(content);
-
-        // Strict structure and coordinate validation
-        if (data && Array.isArray(data.fields) && Array.isArray(data.groups)) {
-          const validatedFields: FieldPolygon[] = [];
-          
-          for (const f of data.fields) {
-            if (!f || typeof f !== "object") continue;
-            const item = f as Record<string, unknown>;
-            if (typeof item.id !== "string" || typeof item.name !== "string" || !Array.isArray(item.coordinates)) {
-              continue;
-            }
-
-            const validCoords: LatLngTuple[] = [];
-            for (const coord of item.coordinates) {
-              if (Array.isArray(coord) && coord.length >= 2) {
-                const lat = Number(coord[0]);
-                const lng = Number(coord[1]);
-                if (Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                  validCoords.push([lat, lng]);
-                }
-              }
-            }
-
-            if (validCoords.length >= 3) {
-              validatedFields.push({
-                id: String(item.id).slice(0, 64),
-                name: String(item.name).slice(0, 128),
-                coordinates: validCoords,
-                cropType: item.cropType ? String(item.cropType).slice(0, 64) : undefined,
-                plantDate: item.plantDate ? new Date(item.plantDate as string | number | Date) : undefined,
-                harvestDate: item.harvestDate ? new Date(item.harvestDate as string | number | Date) : undefined,
-                groupId: item.groupId ? String(item.groupId).slice(0, 64) : undefined,
-                color: item.color ? String(item.color).slice(0, 32) : undefined,
-              });
-            }
-          }
-
-          const validatedGroups = data.groups
-            .filter((g: unknown) => g && typeof g === "object" && typeof (g as Record<string, unknown>).id === "string" && typeof (g as Record<string, unknown>).name === "string")
-            .map((g: Record<string, unknown>) => ({
-              id: String(g.id).slice(0, 64),
-              name: String(g.name).slice(0, 128)
-            }));
-
-          setFields(validatedFields);
-          setGroups(validatedGroups);
-          addActivity(`Imported dataset (${validatedFields.length} valid fields, ${validatedGroups.length} groups)`, "import");
-
-          // Clear file input so the same file can be selected again
-          if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-          }
-
-          alert("Data successfully imported.");
-        } else {
-          alert("Invalid file format. Please select a valid field data file.");
-        }
-      } catch (error) {
-        console.error('Import error:', error);
-        alert("Error reading file or corrupted file format.");
-      }
-    };
-
-    reader.readAsText(file);
-  };
+  }, [dragItem, fields, setFields]);
 
   // Check if right panel should be open
   const isRightPanelOpen = pendingCoordinates !== null || selectedFieldId !== null || selectedGroupId !== null;
@@ -548,6 +460,9 @@ export default function Dashboard() {
           ) : (
             <Button
               variant="default"
+              // Drawing before the stored data arrives would have the new field
+              // wiped out the moment the server copy lands.
+              disabled={!dataReady}
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
               onClick={() => {
                 setIsDrawingMode(true);
@@ -771,21 +686,37 @@ export default function Dashboard() {
         </nav>
 
         <div className="mt-auto px-4 py-4 border-t flex flex-col gap-1">
-          <input
-            type="file"
-            accept=".json"
-            ref={fileInputRef}
-            onChange={handleImportData}
-            className="hidden"
-          />
-          <Button variant="ghost" className="justify-start gap-3 w-full text-zinc-500" onClick={handleExportData}>
-            <Download className="w-4 h-4" />
-            <span className="text-sm">{t.exportBtn}</span>
-          </Button>
-          <Button variant="ghost" className="justify-start gap-3 w-full text-zinc-500" onClick={() => fileInputRef.current?.click()}>
-            <Upload className="w-4 h-4" />
-            <span className="text-sm">{t.importBtn}</span>
-          </Button>
+          {/* Where Export / Import used to be. Data is written to the server as
+              it changes, so what matters now is whether that is working. */}
+          <div
+            className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs ${
+              syncStatus === "error"
+                ? "text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40"
+                : "text-zinc-500 dark:text-zinc-400"
+            }`}
+            title={syncError || undefined}
+          >
+            {syncStatus === "loading" && <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />}
+            {syncStatus === "saving" && <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />}
+            {syncStatus === "idle" && <Cloud className="w-3.5 h-3.5 shrink-0" />}
+            {syncStatus === "error" && <CloudOff className="w-3.5 h-3.5 shrink-0" />}
+            <span className="truncate">
+              {syncStatus === "loading" && t.syncLoading}
+              {syncStatus === "saving" && t.syncSaving}
+              {syncStatus === "idle" && t.syncSaved}
+              {syncStatus === "error" && t.syncError}
+            </span>
+            {syncStatus === "error" && (
+              <button
+                type="button"
+                onClick={retrySync}
+                className="ml-auto flex items-center gap-1 font-medium hover:underline cursor-pointer"
+              >
+                <RefreshCw className="w-3 h-3" />
+                {t.syncRetry}
+              </button>
+            )}
+          </div>
           <Button variant="ghost" className="justify-start gap-3 w-full text-zinc-500" onClick={() => setIsAboutOpen(true)}>
             <Info className="w-4 h-4" />
             <span className="text-sm">{t.aboutBtn}</span>
@@ -839,6 +770,39 @@ export default function Dashboard() {
             />
           </div>
         </header>
+
+        {/* Storage notices. Both sit under the header so they cannot be missed,
+            and neither blocks the map. */}
+        {(reloadedFromServer || (!dataReady && syncStatus === "error")) && (
+          <div className="absolute top-16 left-0 right-0 z-10 px-6 pt-2 pointer-events-none">
+            {reloadedFromServer && (
+              <div className="pointer-events-auto flex items-center gap-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/60 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 shadow-sm">
+                <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                <span className="flex-1">{t.syncReloaded}</span>
+                <button
+                  type="button"
+                  onClick={dismissReloadNotice}
+                  className="font-medium hover:underline cursor-pointer"
+                >
+                  {t.syncDismiss}
+                </button>
+              </div>
+            )}
+            {!dataReady && syncStatus === "error" && (
+              <div className="pointer-events-auto mt-2 flex items-center gap-2 rounded-lg border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/60 px-3 py-2 text-xs text-rose-700 dark:text-rose-300 shadow-sm">
+                <CloudOff className="w-3.5 h-3.5 shrink-0" />
+                <span className="flex-1">{syncError || t.syncLoadFailed}</span>
+                <button
+                  type="button"
+                  onClick={retrySync}
+                  className="font-medium hover:underline cursor-pointer"
+                >
+                  {t.syncRetry}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Map Container */}
         <div className="flex-1 w-full h-full relative z-0 bg-zinc-200 dark:bg-zinc-800">
@@ -1223,5 +1187,13 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <FieldDataProvider>
+      <Dashboard />
+    </FieldDataProvider>
   );
 }

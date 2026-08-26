@@ -24,7 +24,10 @@ import { t } from "@/lib/translations";
 import { type FieldPolygon } from "@/components/Map";
 import { DEFAULT_CENTER } from "@/lib/map-constants";
 import { getPolygonCenter } from "@/lib/geo";
+import { createId } from "@/lib/utils";
 import WeatherDashboard from "@/components/WeatherDashboard";
+import SoilAnalysisDialog from "@/components/SoilAnalysisDialog";
+import { useFieldData } from "@/components/FieldDataProvider";
 import {
   Dialog,
   DialogContent,
@@ -102,8 +105,8 @@ const TOOL_ITEMS = [
     icon: Activity,
     accent: "text-emerald-500 dark:text-emerald-400",
     color: "text-emerald-500 bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800/80 hover:border-emerald-400",
-    badgeColor: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
-    status: t.comingSoon,
+    badgeColor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300",
+    status: t.activeStatus,
   },
   {
     id: "yield",
@@ -122,6 +125,10 @@ type ToolItem = (typeof TOOL_ITEMS)[number];
 
 const TOOL_IDS = new Set<string>(TOOL_ITEMS.map((item) => item.id));
 
+// Modules with a real screen of their own. Everything else falls through to the
+// placeholder dialog, so adding a module here is what retires its placeholder.
+const MODULES_WITH_OWN_DIALOG = new Set(["irrigation", "fertilizer", "soil"]);
+
 // A stored layout can outlive the tool list it was written for. Drop ids that
 // no longer exist and collapse duplicates, which would otherwise render two
 // buttons sharing a React key.
@@ -134,27 +141,6 @@ function sanitizePinned(value: unknown): string[] {
     }
   }
   return result;
-}
-
-function createId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return Math.random().toString(36).slice(2, 11);
-}
-
-function readLogs<T>(key: string): T[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const saved = localStorage.getItem(key);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) return parsed as T[];
-    }
-  } catch (e) {
-    console.error(`Error reading ${key}:`, e);
-  }
-  return [];
 }
 
 interface ToolsBarProps {
@@ -209,30 +195,9 @@ export default function ToolsBar({
     }
   }, [pinnedIds, pinnedLoaded]);
 
-  // Persistent state for irrigation and fertilizer entries
-  const [irrigationLogs, setIrrigationLogs] = useState<
-    Array<{ id: string; fieldName: string; date: string; amount: string; method: string }>
-  >(() => readLogs("fieldmanager-irrigation-logs"));
-
-  const [fertilizerLogs, setFertilizerLogs] = useState<
-    Array<{ id: string; fieldName: string; date: string; type: string; amount: string }>
-  >(() => readLogs("fieldmanager-fertilizer-logs"));
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("fieldmanager-irrigation-logs", JSON.stringify(irrigationLogs));
-    } catch (e) {
-      console.error("Error saving irrigation logs:", e);
-    }
-  }, [irrigationLogs]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("fieldmanager-fertilizer-logs", JSON.stringify(fertilizerLogs));
-    } catch (e) {
-      console.error("Error saving fertilizer logs:", e);
-    }
-  }, [fertilizerLogs]);
+  // Irrigation and fertilizer records are part of the field data the server
+  // keeps, so they come from the provider rather than from this browser.
+  const { irrigationLogs, setIrrigationLogs, fertilizerLogs, setFertilizerLogs } = useFieldData();
 
   const [newIrrigation, setNewIrrigation] = useState({
     fieldId: selectedFieldId || fields[0]?.id || "",
@@ -925,9 +890,17 @@ export default function ToolsBar({
         </DialogContent>
       </Dialog>
 
-      {/* 3. General Extensible Modal for other features */}
+      {/* 3. Soil Analysis */}
+      <SoilAnalysisDialog
+        open={activeModal === "soil"}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        fields={fields}
+        selectedFieldId={selectedFieldId}
+      />
+
+      {/* 4. General Extensible Modal for the modules that have no screen yet */}
       <Dialog
-        open={Boolean(activeModal && activeModal !== "irrigation" && activeModal !== "fertilizer")}
+        open={Boolean(activeModal && !MODULES_WITH_OWN_DIALOG.has(activeModal))}
         onOpenChange={(open) => !open && setActiveModal(null)}
       >
         <DialogContent className="sm:max-w-md">
