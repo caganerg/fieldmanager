@@ -2,7 +2,7 @@
 
 import useSWR from "swr";
 
-import { type AccountRole, type AccountStatus, type PublicAccount } from "@/lib/auth";
+import { type AccountRole, type PublicAccount } from "@/lib/auth";
 
 /**
  * The one list of people, shared by the team panel and the Users page.
@@ -32,7 +32,6 @@ export interface AccountInput {
   email?: string;
   phone?: string;
   role: AccountRole;
-  status?: AccountStatus;
   assignedFieldIds?: string[];
   username?: string;
   password?: string;

@@ -295,10 +295,6 @@ export const t = {
   userRoleAgronomist: "Agronomist",
   userRoleOperator: "Field Operator",
   userRoleViewer: "Field Observer",
-  userStatusOnline: "Online",
-  userStatusInField: "In Field",
-  userStatusOnLeave: "On Leave",
-  userStatusOffline: "Offline",
   allFieldsAccess: "All Fields Access",
   teamNotice: "Everyone who works these fields, and who among them can sign in.",
 

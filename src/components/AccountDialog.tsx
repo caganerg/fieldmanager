@@ -16,16 +16,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   ACCOUNT_ROLES,
-  ACCOUNT_STATUSES,
   ALL_FIELDS,
   MIN_PASSWORD_LENGTH,
   ROLE_ACCESS,
   ROLE_TITLES,
-  STATUS_LABELS,
   hasAllFields,
   normalizeUsername,
   type AccountRole,
-  type AccountStatus,
   type PublicAccount,
 } from "@/lib/auth";
 import { useAccounts, type AccountInput } from "@/lib/use-accounts";
@@ -48,7 +45,6 @@ interface FormState {
   email: string;
   phone: string;
   role: AccountRole;
-  status: AccountStatus;
   assignedFieldIds: string[];
   allFields: boolean;
   username: string;
@@ -61,7 +57,6 @@ function formFor(account: PublicAccount | null): FormState {
     email: account?.email ?? "",
     phone: account?.phone ?? "",
     role: account?.role ?? "agronomist",
-    status: account?.status ?? "online",
     assignedFieldIds: account && !hasAllFields(account) ? account.assignedFieldIds : [],
     allFields: account ? hasAllFields(account) : true,
     username: account?.username ?? "",
@@ -120,7 +115,6 @@ export default function AccountDialog({
       name: form.name.trim(),
       email: form.email.trim(),
       phone: form.phone.trim(),
-      status: form.status,
     };
 
     if (isAdmin) {
@@ -227,40 +221,23 @@ export default function AccountDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Role</Label>
-              <select
-                value={form.role}
-                disabled={!isAdmin || isSelf}
-                onChange={(event) => patch({ role: event.target.value as AccountRole })}
-                className={`${SELECT_CLASS} disabled:opacity-60`}
-              >
-                {ACCOUNT_ROLES.map((role) => (
-                  <option key={role} value={role}>
-                    {ROLE_TITLES[role]}
-                  </option>
-                ))}
-              </select>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-snug">
-                {isSelf && isAdmin ? "You cannot change your own role." : ROLE_ACCESS[form.role]}
-              </p>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Status</Label>
-              <select
-                value={form.status}
-                onChange={(event) => patch({ status: event.target.value as AccountStatus })}
-                className={SELECT_CLASS}
-              >
-                {ACCOUNT_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {STATUS_LABELS[status]}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Role</Label>
+            <select
+              value={form.role}
+              disabled={!isAdmin || isSelf}
+              onChange={(event) => patch({ role: event.target.value as AccountRole })}
+              className={`${SELECT_CLASS} disabled:opacity-60`}
+            >
+              {ACCOUNT_ROLES.map((role) => (
+                <option key={role} value={role}>
+                  {ROLE_TITLES[role]}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-snug">
+              {isSelf && isAdmin ? "You cannot change your own role." : ROLE_ACCESS[form.role]}
+            </p>
           </div>
 
           {/* Field assignment: which fields this person is responsible for. */}

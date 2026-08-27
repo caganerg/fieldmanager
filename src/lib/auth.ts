@@ -1,9 +1,4 @@
-import {
-  USER_ROLES,
-  USER_STATUSES,
-  type UserRole,
-  type UserStatus,
-} from "@/lib/team";
+import { USER_ROLES, type UserRole } from "@/lib/team";
 
 /**
  * One record per person: the profile the team panel shows *and* the credentials
@@ -23,9 +18,6 @@ import {
 
 export const ACCOUNT_ROLES = USER_ROLES;
 export type AccountRole = UserRole;
-
-export const ACCOUNT_STATUSES = USER_STATUSES;
-export type AccountStatus = UserStatus;
 
 /** Seeded on first run, and announced in README.md so it can be changed. */
 export const DEFAULT_ADMIN_USERNAME = "admin";
@@ -54,7 +46,6 @@ export interface PublicAccount {
   email: string;
   phone: string;
   role: AccountRole;
-  status: AccountStatus;
   /** Either the single entry "all" or specific field ids. */
   assignedFieldIds: string[];
   createdAt: string;
@@ -127,10 +118,6 @@ export function isAccountRole(value: unknown): value is AccountRole {
   return typeof value === "string" && (ACCOUNT_ROLES as readonly string[]).includes(value);
 }
 
-export function isAccountStatus(value: unknown): value is AccountStatus {
-  return typeof value === "string" && (ACCOUNT_STATUSES as readonly string[]).includes(value);
-}
-
 /* Presentation. Derived rather than stored: two lists of people drifting apart
    is exactly what this module exists to prevent, and a stored initial or colour
    is one more thing that can disagree with the name it belongs to. */
@@ -164,13 +151,6 @@ export const ROLE_DESCRIPTIONS: Record<AccountRole, string> = {
   agronomist: "Creates and manages irrigation, fertilization and soil records, and follows weather and crop health.",
   operator: "Carries out daily work in the assigned fields and logs what was done.",
   viewer: "Follows field boundaries, status cards and live metrics without changing anything.",
-};
-
-export const STATUS_LABELS: Record<AccountStatus, string> = {
-  online: "Online",
-  in_field: "In Field / Inspection",
-  on_leave: "On Leave",
-  offline: "Offline",
 };
 
 export const ROLE_COLORS: Record<AccountRole, string> = {

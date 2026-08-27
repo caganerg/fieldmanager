@@ -4,17 +4,14 @@
  *
  * The people themselves are accounts (`@/lib/auth`, stored by
  * `@/lib/server/auth-store`): one record per person, holding both the profile
- * the team panel shows and the credentials they sign in with. Roles and
- * statuses live here rather than there because the activity log and the field
- * data reference them too, and `field-data.ts` must be able to import them
- * without pulling in anything about passwords.
+ * the team panel shows and the credentials they sign in with. Roles live here
+ * rather than there because the activity log and the field data reference them
+ * too, and `field-data.ts` must be able to import them without pulling in
+ * anything about passwords.
  */
 
 export const USER_ROLES = ["admin", "agronomist", "operator", "viewer"] as const;
 export type UserRole = (typeof USER_ROLES)[number];
-
-export const USER_STATUSES = ["online", "in_field", "on_leave", "offline"] as const;
-export type UserStatus = (typeof USER_STATUSES)[number];
 
 export const ACTIVITY_TYPES = [
   "field_add",

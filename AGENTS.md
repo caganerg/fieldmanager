@@ -72,8 +72,8 @@ data to `localStorage` — browser storage is only for things that describe the
 browser (theme, pinned tools, the welcome flag, which member the session acts
 as).
 
-`src/lib/team.ts` holds the roles, the statuses and the `ActivityItem` type.
-The people themselves are **not** in this document — see below.
+`src/lib/team.ts` holds the roles and the `ActivityItem` type. The people
+themselves are **not** in this document — see below.
 
 There is no manual export or import, and no file-download or file-upload path.
 That was removed deliberately when the server store landed; the backup story is
@@ -127,12 +127,18 @@ make that trip. Nothing from the store reaches a client except through
 There is one list of people, not two. The team directory used to live in the
 field document as `UserMember` while credentials lived here; adding somebody to
 the farm meant adding them twice, and the two lists drifted. They are one record
-now: profile (name, email, phone, status, assigned fields) and sign-in
-(username, hash) on the same account. A person with no `passwordHash` is a
+now: profile (name, email, phone, assigned fields) and sign-in (username,
+hash) on the same account. A person with no `passwordHash` is a
 directory entry who cannot sign in yet, which is what the old team entries
 became — `importLegacyTeam` moves them across once, reading the field file
 directly because `sanitizeData` no longer knows the `users` key. Do not
 reintroduce a second list.
+
+An account has no presence or availability field. There used to be a `status`
+— online / in field / on leave / offline — set by hand in the account form and
+drawn as a coloured dot on every avatar; nothing updated it, so it only ever
+said what somebody last typed. Do not add it back, and do not derive one from
+`lastLoginAt` either.
 
 `src/lib/use-accounts.ts` is the only client-side reader: one SWR cache behind
 `/api/accounts`, shared by the header panel (`UsersMenu`) and the `/users` page,

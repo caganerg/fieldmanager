@@ -26,7 +26,6 @@ import {
   ROLE_COLORS,
   ROLE_SHORT_TITLES,
   ROLE_TITLES,
-  STATUS_LABELS,
   hasAllFields,
   initialsFor,
   type PublicAccount,
@@ -313,7 +312,7 @@ export default function UsersPage() {
                         )}
                       </p>
                       <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-                        {account.email || "—"} · {STATUS_LABELS[account.status]} ·{" "}
+                        {account.email || "—"} ·{" "}
                         {hasAllFields(account)
                           ? t.allFieldsAccess
                           : `${account.assignedFieldIds.length} ${

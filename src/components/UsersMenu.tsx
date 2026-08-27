@@ -40,7 +40,6 @@ import {
   hasAllFields,
   initialsFor,
   type AccountRole,
-  type AccountStatus,
   type PublicAccount,
 } from "@/lib/auth";
 import { type ActivityItem } from "@/lib/team";
@@ -89,20 +88,6 @@ function roleBadgeStyle(role: AccountRole): string {
       return "bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300 border-amber-200 dark:border-amber-800";
     case "viewer":
       return "bg-purple-100 text-purple-800 dark:bg-purple-950/70 dark:text-purple-300 border-purple-200 dark:border-purple-800";
-  }
-}
-
-function statusDot(status: AccountStatus): string {
-  switch (status) {
-    case "online":
-      return "bg-emerald-500 ring-4 ring-emerald-500/20";
-    case "in_field":
-      return "bg-amber-500 ring-4 ring-amber-500/20";
-    case "on_leave":
-      return "bg-blue-400 ring-4 ring-blue-400/20";
-    case "offline":
-    default:
-      return "bg-zinc-400 ring-4 ring-zinc-400/20";
   }
 }
 
@@ -241,11 +226,6 @@ export default function UsersMenu({
           >
             {currentInitials}
           </div>
-          <span
-            className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${statusDot(
-              user?.status ?? "offline"
-            )}`}
-          />
           {user?.mustChangePassword && (
             <ShieldAlert className="absolute -top-1.5 -right-1.5 w-3 h-3 text-amber-500" />
           )}
@@ -273,17 +253,10 @@ export default function UsersMenu({
           <div className="p-3 rounded-xl bg-gradient-to-br from-zinc-50 to-emerald-50/40 dark:from-zinc-800/70 dark:to-emerald-950/20 border border-zinc-200/70 dark:border-zinc-700/60 mb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="relative">
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm ${currentColor}`}
-                  >
-                    {currentInitials}
-                  </div>
-                  <span
-                    className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full ${statusDot(
-                      user?.status ?? "offline"
-                    )}`}
-                  />
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm ${currentColor}`}
+                >
+                  {currentInitials}
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
@@ -442,19 +415,12 @@ export default function UsersMenu({
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="relative shrink-0">
-                            <div
-                              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shadow-xs ${
-                                ROLE_COLORS[account.role]
-                              }`}
-                            >
-                              {initialsFor(account)}
-                            </div>
-                            <span
-                              className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ${statusDot(
-                                account.status
-                              )}`}
-                            />
+                          <div
+                            className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-xs font-bold shadow-xs ${
+                              ROLE_COLORS[account.role]
+                            }`}
+                          >
+                            {initialsFor(account)}
                           </div>
 
                           <div className="min-w-0">

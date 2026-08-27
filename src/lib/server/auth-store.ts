@@ -14,10 +14,8 @@ import {
   DEFAULT_ADMIN_PASSWORD,
   DEFAULT_ADMIN_USERNAME,
   isAccountRole,
-  isAccountStatus,
   normalizeUsername,
   type AccountRole,
-  type AccountStatus,
   type PublicAccount,
 } from "@/lib/auth";
 import { dataDir, dataFileLocation } from "@/lib/server/data-store";
@@ -34,8 +32,8 @@ import { dataDir, dataFileLocation } from "@/lib/server/data-store";
  *
  * An account without a `passwordHash` is a person who cannot sign in yet: the
  * team directory used to be a separate list, and this is what became of its
- * entries. Everything else about them — role, status, assigned fields — is the
- * same record the login uses.
+ * entries. Everything else about them — role, assigned fields — is the same
+ * record the login uses.
  *
  * Only import this from a route handler or another server module.
  */
@@ -62,7 +60,6 @@ interface StoredAccount {
   email: string;
   phone: string;
   role: AccountRole;
-  status: AccountStatus;
   assignedFieldIds: string[];
   /** Empty when there is no login; never leaves this module. */
   passwordHash: string;
@@ -131,7 +128,6 @@ function sanitizeAccount(value: unknown): StoredAccount | null {
     phone: text(source.phone, 64),
     // An unreadable role falls back to the least privileged one, never to admin.
     role: isAccountRole(source.role) ? source.role : "viewer",
-    status: isAccountStatus(source.status) ? source.status : "offline",
     assignedFieldIds: sanitizeAssignedFields(source.assignedFieldIds),
     passwordHash: typeof source.passwordHash === "string" ? source.passwordHash : "",
     mustChangePassword: source.mustChangePassword === true,
@@ -235,7 +231,6 @@ export function toPublicAccount(account: StoredAccount, full = false): PublicAcc
     email: account.email,
     phone: account.phone,
     role: account.role,
-    status: account.status,
     assignedFieldIds: account.assignedFieldIds,
     createdAt: account.createdAt,
     ...(full
@@ -269,7 +264,6 @@ async function ensureSeeded(): Promise<void> {
       email: "",
       phone: "",
       role: "admin",
-      status: "online",
       assignedFieldIds: [ALL_FIELDS],
       passwordHash: await hashPassword(password),
       mustChangePassword: configured === "",
@@ -335,7 +329,6 @@ async function importLegacyTeam(): Promise<void> {
         email,
         phone: typeof source.phone === "string" ? source.phone.slice(0, 64) : "",
         role: isAccountRole(source.role) ? source.role : "viewer",
-        status: isAccountStatus(source.status) ? source.status : "offline",
         assignedFieldIds: sanitizeAssignedFields(source.assignedFieldIds),
         passwordHash: "",
         mustChangePassword: false,
@@ -373,7 +366,6 @@ export interface CreateAccountInput {
   email?: string;
   phone?: string;
   role: AccountRole;
-  status?: AccountStatus;
   assignedFieldIds?: string[];
   /** Both, or neither: a person can be added without a way to sign in. */
   username?: string;
@@ -400,7 +392,6 @@ export function createAccount(input: CreateAccountInput): Promise<StoreResult<Pu
       email: (input.email || "").slice(0, 128),
       phone: (input.phone || "").slice(0, 64),
       role: input.role,
-      status: input.status || "offline",
       assignedFieldIds: sanitizeAssignedFields(input.assignedFieldIds ?? [ALL_FIELDS]),
       passwordHash: password ? await hashPassword(password) : "",
       // Somebody else chose this password, so the owner is asked to replace it.
@@ -417,7 +408,6 @@ export interface UpdateAccountInput {
   name?: string;
   email?: string;
   phone?: string;
-  status?: AccountStatus;
   role?: AccountRole;
   assignedFieldIds?: string[];
   /** Gives a login to somebody who had none, or replaces an existing one. */
@@ -468,7 +458,6 @@ export function updateAccount(
     if (input.name !== undefined) account.name = input.name.slice(0, 128);
     if (input.email !== undefined) account.email = input.email.slice(0, 128);
     if (input.phone !== undefined) account.phone = input.phone.slice(0, 64);
-    if (input.status !== undefined) account.status = input.status;
     if (input.role !== undefined) account.role = input.role;
     if (input.assignedFieldIds !== undefined) {
       account.assignedFieldIds = sanitizeAssignedFields(input.assignedFieldIds);

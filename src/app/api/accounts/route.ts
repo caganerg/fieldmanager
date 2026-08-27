@@ -3,12 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   ALL_FIELDS,
   isAccountRole,
-  isAccountStatus,
   normalizeUsername,
   validatePassword,
   validateUsername,
   type AccountRole,
-  type AccountStatus,
 } from "@/lib/auth";
 import { createAccount, listAccounts } from "@/lib/server/auth-store";
 import { requireAccount, requireAdmin, storeFailure } from "@/lib/server/session";
@@ -81,7 +79,6 @@ export async function POST(request: NextRequest) {
       email: typeof source?.email === "string" ? source.email : "",
       phone: typeof source?.phone === "string" ? source.phone : "",
       role: source.role as AccountRole,
-      status: isAccountStatus(source?.status) ? (source.status as AccountStatus) : "offline",
       assignedFieldIds: readAssignedFields(source?.assignedFieldIds),
       username,
       password,

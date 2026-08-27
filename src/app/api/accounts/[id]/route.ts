@@ -3,12 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   ALL_FIELDS,
   isAccountRole,
-  isAccountStatus,
   normalizeUsername,
   validatePassword,
   validateUsername,
   type AccountRole,
-  type AccountStatus,
 } from "@/lib/auth";
 import { deleteAccount, updateAccount, type UpdateAccountInput } from "@/lib/server/auth-store";
 import { requireAccount, requireAdmin, storeFailure } from "@/lib/server/session";
@@ -58,12 +56,6 @@ export async function PATCH(request: NextRequest, context: Context) {
   }
   if (typeof source?.email === "string") update.email = source.email;
   if (typeof source?.phone === "string") update.phone = source.phone;
-  if (source?.status !== undefined) {
-    if (!isAccountStatus(source.status)) {
-      return NextResponse.json({ error: "Unknown status." }, { status: 400 });
-    }
-    update.status = source.status as AccountStatus;
-  }
 
   const privileged =
     source?.role !== undefined ||
