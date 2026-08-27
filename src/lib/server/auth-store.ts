@@ -255,7 +255,7 @@ export function toPublicAccount(account: StoredAccount, full = false): PublicAcc
  * every sign-in asks for a new password until it is changed — the app is
  * reachable the moment it starts, and it keeps saying so until it is not.
  */
-export async function ensureSeeded(): Promise<void> {
+async function ensureSeeded(): Promise<void> {
   await enqueue(async () => {
     const document = await readDocument();
     if (document.accounts.length > 0) return;
@@ -366,12 +366,6 @@ export async function listAccounts(full = false): Promise<PublicAccount[]> {
   return document.accounts
     .map((account) => toPublicAccount(account, full))
     .sort((a, b) => (a.name || a.username).localeCompare(b.name || b.username));
-}
-
-export async function findAccount(id: string, full = false): Promise<PublicAccount | null> {
-  const document = await readDocument();
-  const account = document.accounts.find((entry) => entry.id === id);
-  return account ? toPublicAccount(account, full) : null;
 }
 
 export interface CreateAccountInput {

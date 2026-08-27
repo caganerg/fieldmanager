@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { validatePassword } from "@/lib/auth";
 import { changeOwnPassword, sessionTokenHash } from "@/lib/server/auth-store";
-import { requireAccount, sessionTokenFromRequest, sessionUser } from "@/lib/server/session";
+import {
+  requireAccount,
+  sessionTokenFromRequest,
+  sessionUser,
+  storeFailure,
+} from "@/lib/server/session";
 
 export const dynamic = "force-dynamic";
 
@@ -36,18 +41,21 @@ export async function POST(request: NextRequest) {
   }
 
   const token = sessionTokenFromRequest(request);
-  const result = await changeOwnPassword(
-    auth.account.id,
-    currentPassword,
-    newPassword,
-    token ? sessionTokenHash(token) : null
-  );
-  if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: result.status });
+  try {
+    const result = await changeOwnPassword(
+      auth.account.id,
+      currentPassword,
+      newPassword,
+      token ? sessionTokenHash(token) : null
+    );
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: result.status });
+    }
+    return NextResponse.json(
+      { user: sessionUser(result.value) },
+      { headers: { "Cache-Control": "no-store" } }
+    );
+  } catch (error) {
+    return storeFailure(error);
   }
-
-  return NextResponse.json(
-    { user: sessionUser(result.value) },
-    { headers: { "Cache-Control": "no-store" } }
-  );
 }

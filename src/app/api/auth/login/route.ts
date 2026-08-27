@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { normalizeUsername } from "@/lib/auth";
 import { authenticate, createSession } from "@/lib/server/auth-store";
-import { sessionUser, setSessionCookie } from "@/lib/server/session";
+import { sessionUser, setSessionCookie, storeFailure } from "@/lib/server/session";
 
 export const dynamic = "force-dynamic";
 
@@ -60,22 +60,29 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Username and password are required." }, { status: 400 });
   }
 
-  const account = await authenticate(username, password);
-  if (!account) {
-    // One message for both a wrong username and a wrong password, so the reply
-    // never confirms that an account exists.
-    return NextResponse.json({ error: "Username or password is not correct." }, { status: 401 });
-  }
+  try {
+    const account = await authenticate(username, password);
+    if (!account) {
+      // One message for both a wrong username and a wrong password, so the
+      // reply never confirms that an account exists.
+      return NextResponse.json(
+        { error: "Username or password is not correct." },
+        { status: 401 }
+      );
+    }
 
-  attempts.delete(key);
-  const session = await createSession(account.id);
-  return setSessionCookie(
-    NextResponse.json(
-      { user: sessionUser(account) },
-      { headers: { "Cache-Control": "no-store" } }
-    ),
-    request,
-    session.token,
-    session.expiresAt
-  );
+    attempts.delete(key);
+    const session = await createSession(account.id);
+    return setSessionCookie(
+      NextResponse.json(
+        { user: sessionUser(account) },
+        { headers: { "Cache-Control": "no-store" } }
+      ),
+      request,
+      session.token,
+      session.expiresAt
+    );
+  } catch (error) {
+    return storeFailure(error);
+  }
 }

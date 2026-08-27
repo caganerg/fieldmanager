@@ -11,7 +11,7 @@ import {
   type AccountStatus,
 } from "@/lib/auth";
 import { createAccount, listAccounts } from "@/lib/server/auth-store";
-import { requireAccount, requireAdmin } from "@/lib/server/session";
+import { requireAccount, requireAdmin, storeFailure } from "@/lib/server/session";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +28,12 @@ const NO_STORE = { "Cache-Control": "no-store" } as const;
 export async function GET(request: NextRequest) {
   const auth = await requireAccount(request);
   if ("response" in auth) return auth.response;
-  const accounts = await listAccounts(auth.account.role === "admin");
-  return NextResponse.json({ accounts }, { headers: NO_STORE });
+  try {
+    const accounts = await listAccounts(auth.account.role === "admin");
+    return NextResponse.json({ accounts }, { headers: NO_STORE });
+  } catch (error) {
+    return storeFailure(error);
+  }
 }
 
 function readAssignedFields(value: unknown): string[] | undefined {
@@ -71,17 +75,20 @@ export async function POST(request: NextRequest) {
     if (passwordError) return NextResponse.json({ error: passwordError }, { status: 400 });
   }
 
-  const result = await createAccount({
-    name,
-    email: typeof source?.email === "string" ? source.email : "",
-    phone: typeof source?.phone === "string" ? source.phone : "",
-    role: source.role as AccountRole,
-    status: isAccountStatus(source?.status) ? (source.status as AccountStatus) : "offline",
-    assignedFieldIds: readAssignedFields(source?.assignedFieldIds),
-    username,
-    password,
-  });
-  if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
-
-  return NextResponse.json({ account: result.value }, { status: 201, headers: NO_STORE });
+  try {
+    const result = await createAccount({
+      name,
+      email: typeof source?.email === "string" ? source.email : "",
+      phone: typeof source?.phone === "string" ? source.phone : "",
+      role: source.role as AccountRole,
+      status: isAccountStatus(source?.status) ? (source.status as AccountStatus) : "offline",
+      assignedFieldIds: readAssignedFields(source?.assignedFieldIds),
+      username,
+      password,
+    });
+    if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
+    return NextResponse.json({ account: result.value }, { status: 201, headers: NO_STORE });
+  } catch (error) {
+    return storeFailure(error);
+  }
 }

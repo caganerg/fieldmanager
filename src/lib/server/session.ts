@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { roleCanEdit, toSessionUser, type PublicAccount, type SessionUser } from "@/lib/auth";
-import { accountForToken, destroySession } from "@/lib/server/auth-store";
+import { accountForToken, authFileLocation, destroySession } from "@/lib/server/auth-store";
 
 /**
  * Turning a request into the account that made it, and back into a cookie.
@@ -66,28 +66,54 @@ export function clearSessionCookie(response: NextResponse, request: NextRequest)
   return response;
 }
 
-export const UNAUTHORIZED = { error: "Sign in to continue." };
-export const FORBIDDEN = { error: "This account is not allowed to do that." };
-
 export function unauthorized(): NextResponse {
-  return NextResponse.json(UNAUTHORIZED, {
+  return NextResponse.json({ error: "Sign in to continue." }, {
     status: 401,
     headers: { "Cache-Control": "no-store" },
   });
 }
 
-export function forbidden(message = FORBIDDEN.error): NextResponse {
+/**
+ * A store that cannot be read at all — a corrupt or unreadable account file.
+ * It says which file, the way the data route does: the operator is the only one
+ * who can fix it, and "something went wrong" would not tell them where to look.
+ */
+export function storeFailure(error: unknown): NextResponse {
+  const message =
+    error instanceof Error
+      ? error.message
+      : `Could not read the account file at ${authFileLocation()}.`;
+  console.error("Account store failure:", message);
+  return NextResponse.json({ error: message }, {
+    status: 500,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
+export function forbidden(message = "This account is not allowed to do that."): NextResponse {
   return NextResponse.json({ error: message }, {
     status: 403,
     headers: { "Cache-Control": "no-store" },
   });
 }
 
-/** Any signed-in account. */
+/**
+ * Any signed-in account.
+ *
+ * Reading the session touches the account file, so this is also where an
+ * unreadable one has to be answered: every route guarded here would otherwise
+ * throw before reaching its own error handling and return a bare 500 with
+ * nothing in it for the operator to act on.
+ */
 export async function requireAccount(
   request: NextRequest
 ): Promise<{ account: PublicAccount } | { response: NextResponse }> {
-  const account = await accountFromRequest(request);
+  let account: PublicAccount | null;
+  try {
+    account = await accountFromRequest(request);
+  } catch (error) {
+    return { response: storeFailure(error) };
+  }
   if (!account) return { response: unauthorized() };
   return { account };
 }

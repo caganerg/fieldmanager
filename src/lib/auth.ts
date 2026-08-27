@@ -34,7 +34,6 @@ export const DEFAULT_ADMIN_PASSWORD = "admin";
 export const MIN_PASSWORD_LENGTH = 8;
 export const MAX_PASSWORD_LENGTH = 200;
 export const MAX_USERNAME_LENGTH = 32;
-export const MAX_NAME_LENGTH = 128;
 
 /** Every field a person is assigned to, rather than a list of ids. */
 export const ALL_FIELDS = "all";

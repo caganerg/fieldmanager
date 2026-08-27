@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Lock, LogIn, Trees } from "lucide-react";
 
+import { useAuth } from "@/components/AuthProvider";
 import { buttonVariants } from "@/components/ui/button";
 import { t } from "@/lib/translations";
 
@@ -15,6 +16,11 @@ import { t } from "@/lib/translations";
  * screen and the dashboard is never mounted.
  */
 export default function GuestScreen() {
+  // A server that could not answer at all lands here too, since a browser that
+  // cannot ask who it is has no business seeing a workspace. Saying which
+  // failure it was keeps that from reading as "your data is gone".
+  const { error } = useAuth();
+
   return (
     <div className="min-h-dvh flex items-center justify-center bg-zinc-100 dark:bg-zinc-950 px-4 py-10">
       <div className="w-full max-w-md rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-8 shadow-xl">
@@ -32,6 +38,12 @@ export default function GuestScreen() {
         </div>
 
         <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">{t.guestDesc}</p>
+
+        {error && (
+          <p className="mt-4 rounded-lg border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/60 px-3 py-2 text-xs text-rose-700 dark:text-rose-300">
+            {error}
+          </p>
+        )}
 
         <Link href="/login" className={buttonVariants({ size: "lg", className: "mt-6 w-full" })}>
           <LogIn className="h-4 w-4" />

@@ -415,6 +415,13 @@ function Dashboard() {
               // SSR-rendered attribute to client-only load state bakes a
               // disabled button into the prerendered HTML and flashes on every
               // visit; the provider keeps anything drawn early instead.
+              //
+              // A read-only account is different: the session is known before
+              // this component mounts, so there is no flash, and letting a
+              // viewer draw a field the server will refuse to store only loses
+              // their work.
+              disabled={!canEdit}
+              title={canEdit ? undefined : t.readOnlyNotice}
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
               onClick={() => {
                 setIsDrawingMode(true);
@@ -436,8 +443,9 @@ function Dashboard() {
               </h3>
               <button
                 onClick={() => setIsAddingGroup(!isAddingGroup)}
-                className="text-zinc-400 hover:text-emerald-500 transition-colors"
-                title={t.addNewGroup}
+                disabled={!canEdit}
+                className="text-zinc-400 hover:text-emerald-500 transition-colors disabled:opacity-40 disabled:hover:text-zinc-400"
+                title={canEdit ? t.addNewGroup : t.readOnlyNotice}
               >
                 <Plus className="w-4 h-4" />
               </button>

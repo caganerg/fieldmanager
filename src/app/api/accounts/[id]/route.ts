@@ -11,7 +11,7 @@ import {
   type AccountStatus,
 } from "@/lib/auth";
 import { deleteAccount, updateAccount, type UpdateAccountInput } from "@/lib/server/auth-store";
-import { requireAccount, requireAdmin } from "@/lib/server/session";
+import { requireAccount, requireAdmin, storeFailure } from "@/lib/server/session";
 
 export const dynamic = "force-dynamic";
 
@@ -124,9 +124,13 @@ export async function PATCH(request: NextRequest, context: Context) {
     update.password = password;
   }
 
-  const result = await updateAccount(id, update);
-  if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
-  return NextResponse.json({ account: result.value }, { headers: NO_STORE });
+  try {
+    const result = await updateAccount(id, update);
+    if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
+    return NextResponse.json({ account: result.value }, { headers: NO_STORE });
+  } catch (error) {
+    return storeFailure(error);
+  }
 }
 
 export async function DELETE(request: NextRequest, context: Context) {
@@ -138,7 +142,11 @@ export async function DELETE(request: NextRequest, context: Context) {
     return NextResponse.json({ error: "You cannot delete your own account." }, { status: 409 });
   }
 
-  const result = await deleteAccount(id);
-  if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
-  return NextResponse.json({ ok: true }, { headers: NO_STORE });
+  try {
+    const result = await deleteAccount(id);
+    if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
+    return NextResponse.json({ ok: true }, { headers: NO_STORE });
+  } catch (error) {
+    return storeFailure(error);
+  }
 }
