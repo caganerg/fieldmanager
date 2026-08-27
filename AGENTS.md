@@ -59,8 +59,8 @@ add it back.
 
 ## Field data lives on the server
 
-Fields, groups, soil analyses, the irrigation/fertilization records, the team
-list and the activity log are kept in one JSON file on the host, written through
+Fields, groups, soil analyses, the irrigation/fertilization records and the
+activity log are kept in one JSON file on the host, written through
 `src/app/api/data/route.ts` and `src/lib/server/data-store.ts`.
 `FIELDMANAGER_DATA_DIR` selects the directory and defaults to `./data`, which is
 gitignored.
@@ -72,10 +72,8 @@ data to `localStorage` — browser storage is only for things that describe the
 browser (theme, pinned tools, the welcome flag, which member the session acts
 as).
 
-`src/lib/team.ts` holds the `UserMember` and `ActivityItem` types plus their
-seed data. They live there rather than in `UsersMenu.tsx` so the provider and
-`field-data.ts` can import them without a cycle — `UsersMenu` reads its data
-from the provider.
+`src/lib/team.ts` holds the roles, the statuses and the `ActivityItem` type.
+The people themselves are **not** in this document — see below.
 
 There is no manual export or import, and no file-download or file-upload path.
 That was removed deliberately when the server store landed; the backup story is
@@ -90,3 +88,64 @@ silently overwriting the first.
 deliberately isomorphic: no `node:fs`, no Leaflet, so the route, the store and
 the browser all validate against one definition. Anything reaching the store
 goes through `sanitizeData`.
+
+## Accounts and sessions
+
+The app has a login. `/api/data` answers a request without a session with `401`
+and a `viewer` account's `PUT` with `403`, so a visitor who has not signed in —
+the guest state the app opens in — never receives workspace data. Keep those
+checks if you touch the route; the rate limits next to them are damage control,
+not access control.
+
+Accounts live in their own file, `fieldmanager-auth.json`, in the same
+`FIELDMANAGER_DATA_DIR`, written by `src/lib/server/auth-store.ts`. They are
+deliberately **not** a slice of the field document: that document is fetched and
+rewritten wholesale by every signed-in browser, and password hashes must never
+make that trip. Nothing from the store reaches a client except through
+`toPublicAccount`.
+
+- `src/lib/auth.ts` is the isomorphic half — roles, the public account shape, the
+  username and password rules — mirroring what `field-data.ts` does for fields.
+  No `node:crypto` in it.
+- `src/lib/server/session.ts` turns a request into an account:
+  `requireAccount`, `requireEditor`, `requireAdmin`. Route handlers should use
+  those rather than reading the cookie themselves.
+- Passwords are `scrypt` with a per-password salt. Sessions are a random token
+  in an `httpOnly` cookie, stored server-side as a SHA-256 hash so the file
+  cannot be replayed.
+- The first start seeds one `admin` account, with `FIELDMANAGER_ADMIN_PASSWORD`
+  if the operator set one and the documented default `admin` otherwise. Landing
+  on the default sets `mustChangePassword`, which is what makes the app ask for
+  a new password after signing in. That prompt is a suggestion, not a wall — an
+  installation that cannot be opened is worse than one with a weak password on
+  a trusted network. Do not turn it into a forced redirect.
+- The store refuses to demote or delete the last administrator, and the route
+  refuses to let an administrator change their own role or reset their own
+  password. Keep those guards: they are what stops an installation from ending
+  up with nobody who can manage accounts.
+
+There is one list of people, not two. The team directory used to live in the
+field document as `UserMember` while credentials lived here; adding somebody to
+the farm meant adding them twice, and the two lists drifted. They are one record
+now: profile (name, email, phone, status, assigned fields) and sign-in
+(username, hash) on the same account. A person with no `passwordHash` is a
+directory entry who cannot sign in yet, which is what the old team entries
+became — `importLegacyTeam` moves them across once, reading the field file
+directly because `sanitizeData` no longer knows the `users` key. Do not
+reintroduce a second list.
+
+`src/lib/use-accounts.ts` is the only client-side reader: one SWR cache behind
+`/api/accounts`, shared by the header panel (`UsersMenu`) and the `/users` page,
+with `AccountDialog` as the single add/edit form. Two components keeping their
+own copy of the list is exactly the split this replaced.
+
+Reading the list needs any session — a directory nobody can see is not a
+directory — so `GET /api/accounts` is not admin-only; `toPublicAccount(account,
+full)` is what keeps `lastLoginAt` and `mustChangePassword` for administrators.
+A person may edit their own profile fields; role, field assignment, username and
+password are administrator-only, enforced in the route rather than in the form.
+
+`src/components/AuthProvider.tsx` owns the session on the client and is mounted
+in `layout.tsx`, above `FieldDataProvider`. `src/app/page.tsx` is the gate: the
+dashboard and the data provider are only mounted for a signed-in browser, so
+`useFieldData` never runs for a guest.

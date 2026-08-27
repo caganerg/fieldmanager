@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { dataFileLocation, readDocument, saveData } from "@/lib/server/data-store";
+import { requireAccount, requireEditor } from "@/lib/server/session";
 
 // Reads and writes the file on every request, so it must never be prerendered
 // or cached.
 export const dynamic = "force-dynamic";
 
 /**
- * The app has no authentication — see the security note in README.md. Anyone
- * who can reach this server can read and replace the stored field data, so the
- * app belongs on a trusted network or behind an authenticating reverse proxy.
- * The limits below are damage control, not access control: they stop a runaway
- * client or a careless script from filling the disk.
+ * Every request here must carry a session cookie: a visitor who has not signed
+ * in is a guest and sees none of this. Reading needs any account, writing needs
+ * one whose role is not `viewer`.
+ *
+ * The limits below are not access control — that is the session check — but
+ * damage control on top of it: they stop a runaway client or a careless script
+ * from filling the disk.
  */
 const MAX_BODY_BYTES = 8 * 1024 * 1024;
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -48,7 +51,10 @@ function failure(error: unknown, fallback: string) {
   return NextResponse.json({ error: message }, { status: 500 });
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireAccount(request);
+  if ("response" in auth) return auth.response;
+
   try {
     const document = await readDocument();
     return NextResponse.json(document, {
@@ -60,6 +66,9 @@ export async function GET() {
 }
 
 export async function PUT(request: NextRequest) {
+  const auth = await requireEditor(request);
+  if ("response" in auth) return auth.response;
+
   if (isRateLimited(getClientKey(request))) {
     return NextResponse.json(
       { error: "Too many writes. Please slow down and try again shortly." },

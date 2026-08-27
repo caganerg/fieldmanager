@@ -12,6 +12,7 @@ import {
   type SetStateAction,
 } from "react";
 
+import { useAuth } from "@/components/AuthProvider";
 import { type FieldPolygon } from "@/components/Map";
 import {
   emptyData,
@@ -22,20 +23,21 @@ import {
   type StoredField,
 } from "@/lib/field-data";
 import { type SoilAnalysis } from "@/lib/soil";
-import {
-  DEFAULT_USERS,
-  defaultActivity,
-  type ActivityItem,
-  type UserMember,
-} from "@/lib/team";
+import { defaultActivity, type ActivityItem } from "@/lib/team";
 
 /**
- * Owns everything the server keeps: the fields and groups themselves plus the
- * records attached to them. The whole document is read once on mount and
+ * Owns everything the server keeps about the land: the fields and groups
+ * themselves plus the records attached to them. The people are not here — they
+ * are accounts, served by `/api/accounts` and read through `useAccounts`. The whole document is read once on mount and
  * written back, debounced, whenever any part of it changes.
  *
  * Browser storage still holds the things that are about this browser rather
  * than about the farm — theme, pinned tools, the welcome flag.
+ *
+ * Everything here needs a session: `/api/data` answers a guest with a 401 and
+ * a `viewer` with a 403 on writes. The provider is only ever mounted for a
+ * signed-in browser (see `page.tsx`), and it stops writing on its own when the
+ * session turns out to be read-only or to have ended.
  */
 
 const ENDPOINT = "/api/data";
@@ -47,7 +49,6 @@ const LEGACY_KEYS = {
   soilAnalyses: "fieldmanager-soil-analyses",
   irrigationLogs: "fieldmanager-irrigation-logs",
   fertilizerLogs: "fieldmanager-fertilizer-logs",
-  users: "fieldmanager-users",
   activities: "fieldmanager-activities",
 } as const;
 
@@ -59,6 +60,8 @@ interface FieldDataContextValue {
   error: string | null;
   /** Set when the server had newer data and this session adopted it. */
   reloadedFromServer: boolean;
+  /** False for a read-only account; the save effect stands down. */
+  canEdit: boolean;
   dismissReloadNotice: () => void;
   retry: () => void;
 
@@ -72,8 +75,6 @@ interface FieldDataContextValue {
   setIrrigationLogs: Dispatch<SetStateAction<IrrigationLog[]>>;
   fertilizerLogs: FertilizerLog[];
   setFertilizerLogs: Dispatch<SetStateAction<FertilizerLog[]>>;
-  users: UserMember[];
-  setUsers: Dispatch<SetStateAction<UserMember[]>>;
   activities: ActivityItem[];
   setActivities: Dispatch<SetStateAction<ActivityItem[]>>;
 }
@@ -137,9 +138,9 @@ function readLegacy<T>(key: string): T[] {
  *
  * Two sources, in order. Earlier versions kept these records in this browser,
  * so an empty slice adopts the local copy once — upgrading should not look like
- * the records were lost. Failing that, the team and the activity log fall back
- * to their seeds, the way they did when they were read from localStorage, so a
- * fresh workspace is never a blank screen.
+ * the records were lost. Failing that, the activity log falls back to its seed,
+ * the way it did when it was read from localStorage, so a fresh workspace is
+ * never a blank screen.
  *
  * `changed` says whether the result differs from what the server sent, which is
  * what decides if loading should be followed by a write.
@@ -160,13 +161,8 @@ function prepareLoadedData(data: FieldData): { data: FieldData; changed: boolean
   adopt("soilAnalyses", LEGACY_KEYS.soilAnalyses);
   adopt("irrigationLogs", LEGACY_KEYS.irrigationLogs);
   adopt("fertilizerLogs", LEGACY_KEYS.fertilizerLogs);
-  adopt("users", LEGACY_KEYS.users);
   adopt("activities", LEGACY_KEYS.activities);
 
-  if (next.users.length === 0) {
-    next.users = DEFAULT_USERS;
-    changed = true;
-  }
   if (next.activities.length === 0) {
     next.activities = [defaultActivity()];
     changed = true;
@@ -186,15 +182,14 @@ function clearLegacyKeys() {
 }
 
 export default function FieldDataProvider({ children }: { children: ReactNode }) {
+  const { user, refresh: refreshSession } = useAuth();
+  const canEdit = user?.canEdit === true;
+
   const [fields, setFields] = useState<FieldPolygon[]>([]);
   const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
   const [soilAnalyses, setSoilAnalyses] = useState<SoilAnalysis[]>([]);
   const [irrigationLogs, setIrrigationLogs] = useState<IrrigationLog[]>([]);
   const [fertilizerLogs, setFertilizerLogs] = useState<FertilizerLog[]>([]);
-  // Seeded rather than empty so the server render and the first client render
-  // agree, and so the team panel always has somebody to show while the document
-  // is still in flight. The loaded document replaces this.
-  const [users, setUsers] = useState<UserMember[]>(DEFAULT_USERS);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
 
   const [ready, setReady] = useState(false);
@@ -226,7 +221,6 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
     setSoilAnalyses(document.soilAnalyses);
     setIrrigationLogs(document.irrigationLogs);
     setFertilizerLogs(document.fertilizerLogs);
-    setUsers(document.users);
     setActivities(document.activities);
   }, []);
 
@@ -237,6 +231,17 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
       setStatus("loading");
       try {
         const response = await fetch(ENDPOINT, { cache: "no-store" });
+        if (response.status === 401) {
+          // The session ended while this tab was open. Asking the auth provider
+          // to re-read it flips the app back to the guest screen instead of
+          // leaving a workspace on screen that the server will not serve.
+          await refreshSession();
+          if (!cancelled) {
+            setError("Your session has ended. Sign in again to keep working.");
+            setStatus("error");
+          }
+          return;
+        }
         if (!response.ok) {
           const body = await response.json().catch(() => null);
           throw new Error(body?.error || `Server responded with ${response.status}.`);
@@ -278,11 +283,12 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
     return () => {
       cancelled = true;
     };
-  }, [applyDocument, loadToken]);
+  }, [applyDocument, loadToken, refreshSession]);
 
   // Debounced write-back. Every edit anywhere in the document lands here.
   useEffect(() => {
     if (!ready) return;
+    if (!canEdit) return;
     if (skipNextSaveRef.current) {
       skipNextSaveRef.current = false;
       return;
@@ -295,7 +301,6 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
       soilAnalyses,
       irrigationLogs,
       fertilizerLogs,
-      users,
       activities,
     };
 
@@ -308,6 +313,19 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ revision: revisionRef.current, data: payload }),
         });
+
+        if (response.status === 401 || response.status === 403) {
+          // Signed out, or demoted to read-only, since the last write.
+          await refreshSession();
+          const body = await response.json().catch(() => null);
+          setError(
+            typeof body?.error === "string"
+              ? body.error
+              : "Your session has ended. Sign in again to keep working."
+          );
+          setStatus("error");
+          return;
+        }
 
         if (response.status === 409) {
           // Another session got there first. Its version wins; adopting it is
@@ -346,14 +364,15 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
     };
   }, [
     ready,
+    canEdit,
     fields,
     groups,
     soilAnalyses,
     irrigationLogs,
     fertilizerLogs,
-    users,
     activities,
     applyDocument,
+    refreshSession,
   ]);
 
   const retry = useCallback(() => {
@@ -375,6 +394,7 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
         status,
         error,
         reloadedFromServer,
+        canEdit,
         dismissReloadNotice,
         retry,
         fields,
@@ -387,8 +407,6 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
         setIrrigationLogs,
         fertilizerLogs,
         setFertilizerLogs,
-        users,
-        setUsers,
         activities,
         setActivities,
       }}

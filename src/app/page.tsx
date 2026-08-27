@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 
-import { Trees, MapPin, Settings, Trash2, Edit2, ChevronRight, ChevronDown, Save, X, Plus, Folder, FolderOpen, GripVertical, Palette, Info, Sun, Moon, Monitor, Cloud, CloudOff, Loader2, RefreshCw } from "lucide-react";
+import { Trees, MapPin, Settings, Trash2, Edit2, ChevronRight, ChevronDown, Save, X, Plus, Folder, FolderOpen, GripVertical, Palette, Info, Sun, Moon, Monitor, Cloud, CloudOff, Loader2, RefreshCw, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,6 +19,9 @@ import type { LatLngTuple } from "leaflet";
 import ToolsBar from "@/components/ToolsBar";
 import UsersMenu, { type ActivityItem } from "@/components/UsersMenu";
 import FieldDataProvider, { useFieldData } from "@/components/FieldDataProvider";
+import { useAuth } from "@/components/AuthProvider";
+import ChangePasswordDialog from "@/components/ChangePasswordDialog";
+import GuestScreen from "@/components/GuestScreen";
 import { ACTIVITY_LIMIT } from "@/lib/team";
 import { createId } from "@/lib/utils";
 import { getPolygonArea } from "@/lib/geo";
@@ -46,9 +49,12 @@ function Dashboard() {
     error: syncError,
     ready: dataReady,
     reloadedFromServer,
+    canEdit,
     dismissReloadNotice,
     retry: retrySync,
   } = useFieldData();
+
+  const { user } = useAuth();
 
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
@@ -71,9 +77,17 @@ function Dashboard() {
   // Theme State
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
 
-  // Which team member this browser is acting as. Unlike the team itself, this
-  // is a per-session choice, so it stays out of the server document.
-  const [activeUserName, setActiveUserName] = useState("Guest");
+  // The nudge that follows signing in with a password somebody else chose.
+  // Dismissing it only hides it for this page load; the flag stays set on the
+  // account until the password is actually replaced.
+  const [isPasswordPromptOpen, setIsPasswordPromptOpen] = useState(false);
+  const [passwordPromptDismissed, setPasswordPromptDismissed] = useState(false);
+  useEffect(() => {
+    if (user?.mustChangePassword && !passwordPromptDismissed) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsPasswordPromptOpen(true);
+    }
+  }, [user?.mustChangePassword, passwordPromptDismissed]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -132,6 +146,10 @@ function Dashboard() {
       return () => mediaQuery.removeEventListener('change', handler);
     }
   }, [theme]);
+
+  // The activity log names the account that did the thing; there is no longer
+  // a separate "acting as" choice to get out of step with the session.
+  const activeUserName = user?.name || user?.username || "Someone";
 
   const addActivity = useCallback((action: string, type: ActivityItem["type"] = "default") => {
     const newAct: ActivityItem = {
@@ -699,16 +717,21 @@ function Dashboard() {
               activities={activities}
               onAddActivity={addActivity}
               onClearActivities={clearActivities}
-              activeUserName={activeUserName}
-              onActiveUserChange={setActiveUserName}
             />
+
           </div>
         </header>
 
         {/* Storage notices. Both sit under the header so they cannot be missed,
             and neither blocks the map. */}
-        {(reloadedFromServer || (!dataReady && syncStatus === "error")) && (
+        {(reloadedFromServer || !canEdit || (!dataReady && syncStatus === "error")) && (
           <div className="absolute top-16 left-0 right-0 z-10 px-6 pt-2 pointer-events-none">
+            {!canEdit && (
+              <div className="pointer-events-auto mb-2 flex items-center gap-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white/90 dark:bg-zinc-800/90 px-3 py-2 text-xs text-zinc-700 dark:text-zinc-200 shadow-sm">
+                <Eye className="w-3.5 h-3.5 shrink-0" />
+                <span className="flex-1">{t.readOnlyNotice}</span>
+              </div>
+            )}
             {reloadedFromServer && (
               <div className="pointer-events-auto flex items-center gap-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/60 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 shadow-sm">
                 <RefreshCw className="w-3.5 h-3.5 shrink-0" />
@@ -1120,11 +1143,39 @@ function Dashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Suggested, not forced: the dialog closes, and comes back on the next
+          page load until the password is actually replaced. */}
+      <ChangePasswordDialog
+        nudge
+        open={isPasswordPromptOpen}
+        onOpenChange={(open) => {
+          setIsPasswordPromptOpen(open);
+          if (!open) setPasswordPromptDismissed(true);
+        }}
+      />
     </div>
   );
 }
 
+/**
+ * The gate. A visitor is a guest until the server says otherwise, and the
+ * dashboard — with the provider that reads and writes the workspace — is only
+ * mounted for a session the server has recognised.
+ */
 export default function Page() {
+  const { status, ready } = useAuth();
+
+  if (!ready) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center bg-zinc-100 dark:bg-zinc-950">
+        <Loader2 className="w-5 h-5 animate-spin text-zinc-400" />
+      </div>
+    );
+  }
+
+  if (status !== "authenticated") return <GuestScreen />;
+
   return (
     <FieldDataProvider>
       <Dashboard />

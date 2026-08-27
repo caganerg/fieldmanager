@@ -3,13 +3,8 @@ import { sanitizeAnalyses, type SoilAnalysis } from "@/lib/soil";
 import {
   ACTIVITY_LIMIT,
   ACTIVITY_TYPES,
-  USER_ROLES,
-  USER_STATUSES,
   type ActivityItem,
   type ActivityType,
-  type UserMember,
-  type UserRole,
-  type UserStatus,
 } from "@/lib/team";
 
 /**
@@ -37,8 +32,6 @@ const LIMITS = {
   soilAnalyses: 5000,
   irrigationLogs: 10000,
   fertilizerLogs: 10000,
-  users: 500,
-  assignedFields: 2000,
   activities: ACTIVITY_LIMIT,
 } as const;
 
@@ -73,7 +66,6 @@ export interface FieldData {
   soilAnalyses: SoilAnalysis[];
   irrigationLogs: IrrigationLog[];
   fertilizerLogs: FertilizerLog[];
-  users: UserMember[];
   activities: ActivityItem[];
 }
 
@@ -91,7 +83,6 @@ export function emptyData(): FieldData {
     soilAnalyses: [],
     irrigationLogs: [],
     fertilizerLogs: [],
-    users: [],
     activities: [],
   };
 }
@@ -213,37 +204,6 @@ function oneOf<T extends string>(value: unknown, options: readonly T[], fallback
     : fallback;
 }
 
-export function sanitizeUsers(value: unknown): UserMember[] {
-  if (!Array.isArray(value)) return [];
-  const result: UserMember[] = [];
-  for (const entry of value.slice(0, LIMITS.users)) {
-    const source = asRecord(entry);
-    if (!source || typeof source.id !== "string" || source.id === "") continue;
-    const assigned = Array.isArray(source.assignedFieldIds)
-      ? source.assignedFieldIds
-          .slice(0, LIMITS.assignedFields)
-          .filter((id): id is string => typeof id === "string")
-          .map((id) => id.slice(0, MAX_ID))
-      : [];
-    result.push({
-      id: source.id.slice(0, MAX_ID),
-      name: text(source.name, MAX_NAME),
-      email: text(source.email, MAX_NAME),
-      phone: text(source.phone, 64),
-      role: oneOf<UserRole>(source.role, USER_ROLES, "viewer"),
-      roleTitle: text(source.roleTitle, MAX_NAME),
-      initials: text(source.initials, 8),
-      status: oneOf<UserStatus>(source.status, USER_STATUSES, "offline"),
-      statusText: text(source.statusText, MAX_NAME),
-      assignedFieldIds: assigned,
-      joinedDate: text(source.joinedDate, 32),
-      lastActive: text(source.lastActive, 64),
-      color: text(source.color, MAX_NAME),
-    });
-  }
-  return result;
-}
-
 export function sanitizeActivities(value: unknown): ActivityItem[] {
   if (!Array.isArray(value)) return [];
   const result: ActivityItem[] = [];
@@ -271,7 +231,6 @@ export function sanitizeData(value: unknown): FieldData {
     soilAnalyses: sanitizeAnalyses(source.soilAnalyses).slice(0, LIMITS.soilAnalyses),
     irrigationLogs: sanitizeIrrigationLogs(source.irrigationLogs).slice(0, LIMITS.irrigationLogs),
     fertilizerLogs: sanitizeFertilizerLogs(source.fertilizerLogs),
-    users: sanitizeUsers(source.users),
     activities: sanitizeActivities(source.activities),
   };
 }

@@ -1,11 +1,13 @@
 /**
- * Team members and the activity log. Both are part of the workspace rather than
- * of one browser, so they live in the server document alongside the fields.
+ * The vocabulary the people in a workspace are described with, plus the
+ * activity log.
  *
- * The types and the seed data sit here rather than in `UsersMenu.tsx` so that
- * `field-data.ts` and `FieldDataProvider.tsx` can reach them without importing
- * the component that renders them — that would be a cycle, since the component
- * reads its data from the provider.
+ * The people themselves are accounts (`@/lib/auth`, stored by
+ * `@/lib/server/auth-store`): one record per person, holding both the profile
+ * the team panel shows and the credentials they sign in with. Roles and
+ * statuses live here rather than there because the activity log and the field
+ * data reference them too, and `field-data.ts` must be able to import them
+ * without pulling in anything about passwords.
  */
 
 export const USER_ROLES = ["admin", "agronomist", "operator", "viewer"] as const;
@@ -26,23 +28,6 @@ export const ACTIVITY_TYPES = [
 ] as const;
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 
-export interface UserMember {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: UserRole;
-  roleTitle: string;
-  initials: string;
-  status: UserStatus;
-  statusText: string;
-  /** Either the single entry "all" or specific field ids. */
-  assignedFieldIds: string[];
-  joinedDate: string;
-  lastActive: string;
-  color: string;
-}
-
 export interface ActivityItem {
   id: string;
   user: string;
@@ -51,29 +36,10 @@ export interface ActivityItem {
   type?: ActivityType;
 }
 
-/** Seeded into a workspace that has no team yet, so the app is never empty. */
-export const DEFAULT_USERS: UserMember[] = [
-  {
-    id: "u1",
-    name: "Guest",
-    email: "guest@fieldmanager.local",
-    phone: "+1 (555) 000-0000",
-    role: "admin",
-    roleTitle: "System Administrator (Admin)",
-    initials: "GU",
-    status: "online",
-    statusText: "Online",
-    assignedFieldIds: ["all"],
-    joinedDate: "01/01/2026",
-    lastActive: "Active now",
-    color: "bg-emerald-600 text-white",
-  },
-];
-
 export function defaultActivity(): ActivityItem {
   return {
     id: "act-init",
-    user: "Guest",
+    user: "Field Manager",
     action: "Workspace initialized and ready",
     timestamp: Date.now(),
     type: "default",

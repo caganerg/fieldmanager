@@ -25,7 +25,7 @@ import {
 
 const FILE_NAME = "fieldmanager.json";
 
-function dataDir(): string {
+export function dataDir(): string {
   const configured = (process.env.FIELDMANAGER_DATA_DIR || "").trim();
   return configured ? path.resolve(configured) : path.join(process.cwd(), "data");
 }
