@@ -25,6 +25,7 @@ import { getPolygonCenter } from "@/lib/geo";
 import WeatherDashboard from "@/components/WeatherDashboard";
 import { useAssistant } from "@/components/AssistantProvider";
 import IrrigationDialog from "@/components/IrrigationDialog";
+import ProtectionDialog from "@/components/ProtectionDialog";
 import FertilizerDialog from "@/components/FertilizerDialog";
 import SoilAnalysisDialog from "@/components/SoilAnalysisDialog";
 import {
@@ -91,8 +92,8 @@ const TOOL_ITEMS = [
     icon: Bug,
     accent: "text-rose-500 dark:text-rose-400",
     color: "text-rose-500 bg-rose-50 dark:bg-rose-950/50 border-rose-200 dark:border-rose-800/80 hover:border-rose-400",
-    badgeColor: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
-    status: t.comingSoon,
+    badgeColor: "bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300",
+    status: t.activeStatus,
   },
   {
     id: "soil",
@@ -135,7 +136,7 @@ const TOOL_IDS = new Set<string>(TOOL_ITEMS.map((item) => item.id));
 
 // Modules with a real screen of their own. Everything else falls through to the
 // placeholder dialog, so adding a module here is what retires its placeholder.
-const MODULES_WITH_OWN_DIALOG = new Set(["irrigation", "fertilizer", "soil"]);
+const MODULES_WITH_OWN_DIALOG = new Set(["irrigation", "fertilizer", "pesticide", "soil"]);
 
 // A stored layout can outlive the tool list it was written for. Drop ids that
 // no longer exist and collapse duplicates, which would otherwise render two
@@ -586,7 +587,16 @@ export default function ToolsBar({
         selectedFieldId={selectedFieldId}
       />
 
-      {/* 3. Soil Analysis */}
+      {/* 3. Crop Protection. The tool id stays "pesticide": it is what stored
+          pinned layouts hold, and an unknown id is dropped from them. */}
+      <ProtectionDialog
+        open={activeModal === "pesticide"}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        fields={fields}
+        selectedFieldId={selectedFieldId}
+      />
+
+      {/* 4. Soil Analysis */}
       <SoilAnalysisDialog
         open={activeModal === "soil"}
         onOpenChange={(open) => !open && setActiveModal(null)}

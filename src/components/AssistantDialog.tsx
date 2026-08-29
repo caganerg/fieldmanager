@@ -19,6 +19,7 @@ const TOPIC_LABELS: Record<AssistantTopic, string> = {
   general: t.assistant.contextGeneral,
   fertilizer: t.assistant.contextFertilizer,
   soil: t.assistant.contextSoil,
+  protection: t.assistant.contextProtection,
 };
 
 interface AssistantDialogProps {

@@ -170,12 +170,46 @@ export const t = {
     contextGeneral: "All fields",
     contextFertilizer: "Fertilization",
     contextSoil: "Soil analysis",
+    contextProtection: "Crop protection",
     answeredBy: "Answered by {model}",
     // A dosage is the farmer's call, and a model does not walk the field.
     disclaimer: "Guidance, not a prescription — check it against your own agronomist.",
     failed: "The assistant could not answer. Please try again.",
     unconfigured: "The assistant is not set up on this server yet.",
     retry: "Try again",
+  },
+
+  // Crop protection module
+  protection: {
+    addTitle: "Record a Treatment",
+    historyTitle: "Treatment History",
+    empty: "No treatment recorded for this field yet.",
+    needsField: "Draw a field on the map before recording a treatment.",
+    needsAgent: "Enter what was applied before saving.",
+    save: "Save Record",
+    delete: "Delete record",
+    date: "Treatment Date",
+    method: "Method",
+    methods: {
+      biological: "Biological control",
+      chemical: "Chemical control",
+    },
+    // What was applied. The label follows the method: a product for a spray,
+    // a released beneficial for a biological treatment.
+    agentChemical: "Pesticide",
+    agentBiological: "Beneficial Used",
+    agentChemicalPlaceholder: "Product name as written on the label",
+    agentBiologicalPlaceholder: "e.g., Encarsia formosa",
+    target: "Target Pest",
+    targetPlaceholder: "e.g., whitefly",
+    dose: "Dose",
+    doseChemicalPlaceholder: "e.g., 200 ml/da",
+    doseBiologicalPlaceholder: "e.g., 5000 individuals/da",
+    notes: "Notes",
+    notesPlaceholder: "Weather, equipment, what was observed afterwards…",
+    lastTitle: "Last Treatment",
+    totalTreatments: "Treatments recorded",
+    biologicalShare: "Biological",
   },
 
   // Fertilization module

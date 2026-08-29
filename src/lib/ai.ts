@@ -39,9 +39,9 @@ export interface AiMessage {
  * Which part of the app the question was asked from. It selects the system
  * prompt and decides what the route puts in front of the model — a soil
  * question wants the analyses, a fertilisation question wants those plus what
- * has already been applied.
+ * has already been applied, a crop protection question wants the treatments.
  */
-export const ASSISTANT_TOPICS = ["general", "fertilizer", "soil"] as const;
+export const ASSISTANT_TOPICS = ["general", "fertilizer", "soil", "protection"] as const;
 export type AssistantTopic = (typeof ASSISTANT_TOPICS)[number];
 
 // Ceilings, not expectations. A model call costs money per token, so unlike the

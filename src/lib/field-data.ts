@@ -1,4 +1,5 @@
 import { sanitizeIrrigationLogs, type IrrigationLog } from "@/lib/irrigation";
+import { sanitizeProtectionLogs, type ProtectionLog } from "@/lib/protection";
 import { sanitizeAnalyses, type SoilAnalysis } from "@/lib/soil";
 import {
   ACTIVITY_LIMIT,
@@ -32,6 +33,7 @@ const LIMITS = {
   soilAnalyses: 5000,
   irrigationLogs: 10000,
   fertilizerLogs: 10000,
+  protectionLogs: 10000,
   activities: ACTIVITY_LIMIT,
 } as const;
 
@@ -66,6 +68,7 @@ export interface FieldData {
   soilAnalyses: SoilAnalysis[];
   irrigationLogs: IrrigationLog[];
   fertilizerLogs: FertilizerLog[];
+  protectionLogs: ProtectionLog[];
   activities: ActivityItem[];
 }
 
@@ -83,6 +86,7 @@ export function emptyData(): FieldData {
     soilAnalyses: [],
     irrigationLogs: [],
     fertilizerLogs: [],
+    protectionLogs: [],
     activities: [],
   };
 }
@@ -231,6 +235,7 @@ export function sanitizeData(value: unknown): FieldData {
     soilAnalyses: sanitizeAnalyses(source.soilAnalyses).slice(0, LIMITS.soilAnalyses),
     irrigationLogs: sanitizeIrrigationLogs(source.irrigationLogs).slice(0, LIMITS.irrigationLogs),
     fertilizerLogs: sanitizeFertilizerLogs(source.fertilizerLogs),
+    protectionLogs: sanitizeProtectionLogs(source.protectionLogs).slice(0, LIMITS.protectionLogs),
     activities: sanitizeActivities(source.activities),
   };
 }
@@ -247,4 +252,4 @@ export function sanitizeDocument(value: unknown): StoredDocument {
   };
 }
 
-export type { IrrigationLog, SoilAnalysis };
+export type { IrrigationLog, ProtectionLog, SoilAnalysis };

@@ -59,9 +59,9 @@ add it back.
 
 ## Field data lives on the server
 
-Fields, groups, soil analyses, the irrigation/fertilization records and the
-activity log are kept in one JSON file on the host, written through
-`src/app/api/data/route.ts` and `src/lib/server/data-store.ts`.
+Fields, groups, soil analyses, the irrigation, fertilization and crop protection
+records and the activity log are kept in one JSON file on the host, written
+through `src/app/api/data/route.ts` and `src/lib/server/data-store.ts`.
 `FIELDMANAGER_DATA_DIR` selects the directory and defaults to `./data`, which is
 gitignored.
 
@@ -158,8 +158,9 @@ dashboard and the data provider are only mounted for a signed-in browser, so
 
 ## The assistant
 
-There is one assistant, reachable from three places: the "Ask AI" tool in the
-header, and a button in each of the fertilization and soil dialogs. They share
+There is one assistant, reachable from four places: the "Ask AI" tool in the
+header, and a button in each of the fertilization, soil and crop protection
+dialogs. They share
 one conversation, owned by `src/components/AssistantProvider.tsx` and drawn by
 `AssistantDialog`. Three chat surfaces with three histories is exactly the split
 this avoids — the entry points differ only in the *context* they attach to the
@@ -186,8 +187,10 @@ document, and the topic is what narrows it. A `fertilizer` question gets that
 field's applications together with its latest analysis and its recent watering —
 the analysis says what the soil holds and the log says what has been added, and
 neither answers a dosage question alone. A `soil` question gets the reports and
-not the applications. A `general` one gets a register of the fields and the
-record counts, and none of the detail. Measurements are rendered with the band
+not the applications. A `protection` one gets that field's treatments, each
+named by its method, because whether a beneficial was released or a product was
+sprayed is what the answer turns on. A `general` one gets a register of the
+fields and the record counts, and none of the detail. Measurements are rendered with the band
 they fall in ("Organic Matter 1.4 % (Low)") using the same `rateMeasurement`
 the dialogs display, so the answer and the screen cannot disagree about what
 counts as low. The caps at the top of the file are a token budget, not a

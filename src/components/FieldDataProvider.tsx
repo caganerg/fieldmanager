@@ -19,6 +19,7 @@ import {
   type FertilizerLog,
   type FieldData,
   type IrrigationLog,
+  type ProtectionLog,
   type StoredDocument,
   type StoredField,
 } from "@/lib/field-data";
@@ -75,6 +76,8 @@ interface FieldDataContextValue {
   setIrrigationLogs: Dispatch<SetStateAction<IrrigationLog[]>>;
   fertilizerLogs: FertilizerLog[];
   setFertilizerLogs: Dispatch<SetStateAction<FertilizerLog[]>>;
+  protectionLogs: ProtectionLog[];
+  setProtectionLogs: Dispatch<SetStateAction<ProtectionLog[]>>;
   activities: ActivityItem[];
   setActivities: Dispatch<SetStateAction<ActivityItem[]>>;
 }
@@ -190,6 +193,7 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
   const [soilAnalyses, setSoilAnalyses] = useState<SoilAnalysis[]>([]);
   const [irrigationLogs, setIrrigationLogs] = useState<IrrigationLog[]>([]);
   const [fertilizerLogs, setFertilizerLogs] = useState<FertilizerLog[]>([]);
+  const [protectionLogs, setProtectionLogs] = useState<ProtectionLog[]>([]);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
 
   const [ready, setReady] = useState(false);
@@ -221,6 +225,7 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
     setSoilAnalyses(document.soilAnalyses);
     setIrrigationLogs(document.irrigationLogs);
     setFertilizerLogs(document.fertilizerLogs);
+    setProtectionLogs(document.protectionLogs);
     setActivities(document.activities);
   }, []);
 
@@ -301,6 +306,7 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
       soilAnalyses,
       irrigationLogs,
       fertilizerLogs,
+      protectionLogs,
       activities,
     };
 
@@ -370,6 +376,7 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
     soilAnalyses,
     irrigationLogs,
     fertilizerLogs,
+    protectionLogs,
     activities,
     applyDocument,
     refreshSession,
@@ -407,6 +414,8 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
         setIrrigationLogs,
         fertilizerLogs,
         setFertilizerLogs,
+        protectionLogs,
+        setProtectionLogs,
         activities,
         setActivities,
       }}

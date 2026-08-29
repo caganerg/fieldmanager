@@ -5,7 +5,13 @@ import {
   rateMeasurement,
   type SoilAnalysis,
 } from "@/lib/soil";
-import { byNewestIrrigation, methodLabel } from "@/lib/irrigation";
+import { byNewestIrrigation, methodLabel as irrigationMethodLabel } from "@/lib/irrigation";
+import {
+  byNewestTreatment,
+  methodLabel,
+  treatmentsForField,
+  type ProtectionLog,
+} from "@/lib/protection";
 import { readDocument } from "@/lib/server/data-store";
 import type { AssistantTopic } from "@/lib/ai";
 import type { FertilizerLog, StoredDocument, StoredField } from "@/lib/field-data";
@@ -32,6 +38,7 @@ const MAX_FIELDS_LISTED = 60;
 const MAX_ANALYSES_PER_FIELD = 4;
 const MAX_FERTILIZER_LOGS = 20;
 const MAX_IRRIGATION_LOGS = 8;
+const MAX_PROTECTION_LOGS = 20;
 
 const LOCALE = "tr-TR";
 
@@ -77,6 +84,20 @@ function describeAnalysis(analysis: SoilAnalysis): string {
   lines.push(readings.length > 0 ? `  ${readings.join("; ")}` : "  no measurements recorded");
   if (analysis.notes) lines.push(`  note: ${analysis.notes}`);
   return lines.join("\n");
+}
+
+/**
+ * One treatment. The method is spelled out rather than left as a key, because
+ * it is the thing the answer turns on: "Encarsia formosa" means something
+ * different released as a beneficial than it would as a product name, and a
+ * question about resistance or residue only applies to one of the two.
+ */
+function describeProtectionLog(log: ProtectionLog): string {
+  const parts = [`${methodLabel(log.method)}: ${log.agent || "unnamed"}`];
+  if (log.target) parts.push(`against ${log.target}`);
+  if (log.dose) parts.push(log.dose);
+  const line = `- ${log.date || "undated"} — ${parts.join(", ")}`;
+  return log.notes ? `${line}\n  note: ${log.notes}` : line;
 }
 
 function describeFertilizerLog(log: FertilizerLog): string {
@@ -140,6 +161,8 @@ const TOPIC_RULES: Record<AssistantTopic, string> = {
   fertilizer:
     "The question is about fertilisation. Read the applications already made together with the latest soil analysis: the analysis says what the soil holds, the log says what has been added to it, and a recommendation has to account for both.",
   soil: "The question is about soil analysis. The reports below carry each measurement with the band it falls in, using the classification the application itself displays.",
+  protection:
+    "The question is about crop protection. Each treatment below says which approach was used — biological, meaning a beneficial organism was released, or chemical, meaning a product was sprayed — along with what was applied, what it was aimed at and at what dose. Both the product and the beneficial were typed by the grower, so treat the spelling as theirs and do not correct a name into a different one. Where a run of sprays repeats the same product against the same pest, resistance is worth raising; where a biological treatment is in play, say plainly if a chemical suggestion would undo it.",
 };
 
 /**
@@ -208,16 +231,31 @@ export async function buildSystemPrompt(
       .slice(0, MAX_IRRIGATION_LOGS)
       .map(
         (log) =>
-          `- ${log.date || "undated"}: ${methodLabel(log.method)}${
+          `- ${log.date || "undated"}: ${irrigationMethodLabel(log.method)}${
             log.waterM3 > 0 ? `, ${log.waterM3} m³` : ""
           }`
       );
     records.push(section("RECENT IRRIGATION", irrigation, "No irrigation has been recorded."));
   }
 
+  if (topic === "protection") {
+    const treatments = (
+      field
+        ? treatmentsForField(document.protectionLogs, field.id)
+        : [...document.protectionLogs].sort(byNewestTreatment)
+    ).slice(0, MAX_PROTECTION_LOGS);
+    records.push(
+      section(
+        "CROP PROTECTION APPLIED (most recent first)",
+        treatments.map(describeProtectionLog),
+        "No treatment has been recorded for this scope."
+      )
+    );
+  }
+
   if (topic === "general") {
     records.push(
-      `RECORD COUNTS\n- soil analyses: ${document.soilAnalyses.length}\n- fertilization records: ${document.fertilizerLogs.length}\n- irrigation records: ${document.irrigationLogs.length}`
+      `RECORD COUNTS\n- soil analyses: ${document.soilAnalyses.length}\n- fertilization records: ${document.fertilizerLogs.length}\n- irrigation records: ${document.irrigationLogs.length}\n- crop protection records: ${document.protectionLogs.length}`
     );
   }
 

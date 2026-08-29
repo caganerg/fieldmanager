@@ -30,8 +30,8 @@ chmod 600 .env.local        # the file holds a secret
 $EDITOR .env.local
 ```
 
-The assistant — the "Ask AI" tool and the buttons in the fertilization and soil
-modules — is configured in the same file and is optional. Set
+The assistant — the "Ask AI" tool and the buttons in the fertilization, soil and
+crop protection modules — is configured in the same file and is optional. Set
 `FIELDMANAGER_AI_PROVIDER` (`anthropic`, `openai` or `gemini`),
 `FIELDMANAGER_AI_API_KEY` and `FIELDMANAGER_AI_MODEL` to switch it on; leave
 them unset and the app says the assistant is not set up on this server. Like the
@@ -56,9 +56,9 @@ bun run lint    # eslint
 
 ## 💾 Where Your Data Lives
 
-Fields, groups, soil analyses, irrigation and fertilization records and the
-activity log are stored **on the server you install the app on**, in a single
-JSON file, and are only served to a browser that has signed in. The people are
+Fields, groups, soil analyses, irrigation, fertilization and crop protection
+records and the activity log are stored **on the server you install the app on**,
+in a single JSON file, and are only served to a browser that has signed in. The people are
 kept beside it in a second file — see [Accounts and Signing In](#-accounts-and-signing-in). The app writes it as you work — there is nothing to save,
 export or import by hand.
 
