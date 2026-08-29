@@ -19,6 +19,7 @@ import type { LatLngTuple } from "leaflet";
 import ToolsBar from "@/components/ToolsBar";
 import UsersMenu, { type ActivityItem } from "@/components/UsersMenu";
 import FieldDataProvider, { useFieldData } from "@/components/FieldDataProvider";
+import AssistantProvider from "@/components/AssistantProvider";
 import { useAuth } from "@/components/AuthProvider";
 import ChangePasswordDialog from "@/components/ChangePasswordDialog";
 import GuestScreen from "@/components/GuestScreen";
@@ -1186,7 +1187,9 @@ export default function Page() {
 
   return (
     <FieldDataProvider>
-      <Dashboard />
+      <AssistantProvider>
+        <Dashboard />
+      </AssistantProvider>
     </FieldDataProvider>
   );
 }

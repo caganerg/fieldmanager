@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Activity, Plus, Trash2, ChevronDown, FlaskConical, CalendarDays } from "lucide-react";
+import { Activity, Plus, Trash2, ChevronDown, FlaskConical, CalendarDays, Sparkles } from "lucide-react";
 import { t } from "@/lib/translations";
 import { createId } from "@/lib/utils";
 import { type FieldPolygon } from "@/components/Map";
@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useFieldData } from "@/components/FieldDataProvider";
+import { useAssistant } from "@/components/AssistantProvider";
 import SoilReadingTile from "@/components/SoilReadingTile";
 import {
   SOIL_PARAMETERS,
@@ -119,6 +120,7 @@ export default function SoilAnalysisDialog({
 }: SoilAnalysisDialogProps) {
   // Analyses belong to the fields, so they live in the server-backed store.
   const { soilAnalyses: analyses, setSoilAnalyses: setAnalyses } = useFieldData();
+  const { openAssistant } = useAssistant();
 
   const [draft, setDraft] = useState<SoilDraft>(() => createDraft(""));
   const [showMicro, setShowMicro] = useState(false);
@@ -189,6 +191,22 @@ export default function SoilAnalysisDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
+          {/* The same assistant the tool bar opens, pointed at this report. */}
+          <button
+            type="button"
+            onClick={() =>
+              openAssistant({
+                topic: "soil",
+                fieldId: draft.fieldId,
+                fieldName: fields.find((field) => field.id === draft.fieldId)?.name ?? "",
+              })
+            }
+            className="w-full flex items-center justify-center gap-1.5 text-[11px] font-medium py-1.5 rounded-lg border border-violet-200 dark:border-violet-900/60 bg-violet-50/60 dark:bg-violet-950/30 text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-950/60 transition-colors cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            {t.assistant.ask}
+          </button>
+
           {/* Latest reading for the chosen field, so the form opens with context */}
           {latest && (
             <div className="p-3 rounded-xl border border-emerald-100 dark:border-emerald-900/50 bg-emerald-50/60 dark:bg-emerald-950/30">

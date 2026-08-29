@@ -155,3 +155,43 @@ password are administrator-only, enforced in the route rather than in the form.
 in `layout.tsx`, above `FieldDataProvider`. `src/app/page.tsx` is the gate: the
 dashboard and the data provider are only mounted for a signed-in browser, so
 `useFieldData` never runs for a guest.
+
+## The assistant
+
+There is one assistant, reachable from three places: the "Ask AI" tool in the
+header, and a button in each of the fertilization and soil dialogs. They share
+one conversation, owned by `src/components/AssistantProvider.tsx` and drawn by
+`AssistantDialog`. Three chat surfaces with three histories is exactly the split
+this avoids — the entry points differ only in the *context* they attach to the
+next question (`topic` plus `fieldId`).
+
+`src/lib/ai.ts` is the isomorphic half, in the same sense as `field-data.ts` and
+`auth.ts`: no `node:fs`, no vendor SDK. It holds the message shape, the topics,
+the limits and `sanitizeMessages`. Nothing in it is vendor-specific — it is the
+common denominator of the OpenAI, Gemini and Anthropic APIs, and the comment at
+the top of the file records which differences it is absorbing (system prompt
+travelling beside the turns, `assistant` vs Gemini's `model`, the first turn
+having to be the user's). Adding the third adapter should not require touching
+it.
+
+`src/app/api/ai/route.ts` is written except for the vendor call, which is marked
+in the file. It reads `FIELDMANAGER_AI_PROVIDER`, `FIELDMANAGER_AI_API_KEY` and
+`FIELDMANAGER_AI_MODEL` from the server environment and answers `503` with
+`unconfigured: true` when they are unset, which is what makes the dialog say the
+assistant is not set up rather than look broken.
+
+Two rules to keep if you write that adapter:
+
+- The key, the provider and the model come from the server environment only.
+  There is no settings field for them and the route must not accept them from
+  the request — the same rule the weather route follows, and for the same
+  reason: that path puts a secret in `localStorage` and lets a client bill
+  somebody else's account.
+- The request carries a `fieldId`, not field data. The server already holds the
+  document and reads the analyses and records itself. A client that assembled
+  its own context could put anything in front of the model and call it a
+  measurement, and it would cost more to ship.
+
+The model is named in the environment rather than defaulted in the source
+because model names are the fastest-moving part of all three APIs; a constant
+compiled in here would go stale silently.

@@ -23,6 +23,7 @@ import { type FieldPolygon } from "@/components/Map";
 import { DEFAULT_CENTER } from "@/lib/map-constants";
 import { getPolygonCenter } from "@/lib/geo";
 import WeatherDashboard from "@/components/WeatherDashboard";
+import { useAssistant } from "@/components/AssistantProvider";
 import IrrigationDialog from "@/components/IrrigationDialog";
 import FertilizerDialog from "@/components/FertilizerDialog";
 import SoilAnalysisDialog from "@/components/SoilAnalysisDialog";
@@ -105,6 +106,17 @@ const TOOL_ITEMS = [
     status: t.activeStatus,
   },
   {
+    id: "assistant",
+    title: t.featureAssistant,
+    short: t.featureAssistantShort,
+    desc: t.featureAssistantDesc,
+    icon: Sparkles,
+    accent: "text-violet-500 dark:text-violet-400",
+    color: "text-violet-500 bg-violet-50 dark:bg-violet-950/50 border-violet-200 dark:border-violet-800/80 hover:border-violet-400",
+    badgeColor: "bg-violet-100 text-violet-700 dark:bg-violet-900/60 dark:text-violet-300",
+    status: t.activeStatus,
+  },
+  {
     id: "yield",
     title: t.featureYield,
     short: t.featureYieldShort,
@@ -153,6 +165,7 @@ export default function ToolsBar({
   // at once and overlap each other; one slot makes them mutually exclusive.
   const [openPanel, setOpenPanel] = useState<"tools" | "weather" | null>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
+  const { openAssistant } = useAssistant();
   const isOpen = openPanel === "tools";
   const isWeatherOpen = openPanel === "weather";
 
@@ -224,6 +237,14 @@ export default function ToolsBar({
       return;
     }
     setOpenPanel(null);
+    // The assistant is not one of the tool modals: it is owned by
+    // AssistantProvider so the same conversation is reachable from the modules
+    // too, and this is just another way in.
+    if (id === "assistant") {
+      const field = fields.find((f) => f.id === selectedFieldId);
+      openAssistant({ topic: "general", fieldId: field?.id ?? "", fieldName: field?.name ?? "" });
+      return;
+    }
     setActiveModal(id);
   };
 

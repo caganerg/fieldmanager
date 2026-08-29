@@ -127,7 +127,10 @@ export const t = {
   featureSoilAnalysisDesc: "pH, organic matter, and soil health reports",
   featureYield: "Yield & Harvest",
   featureYieldDesc: "Yield forecasts, crop growth, and production stats",
-  
+  featureAssistant: "Ask the Assistant",
+  featureAssistantDesc: "Questions about your fields, answered against your own records",
+
+  featureAssistantShort: "Ask AI",
   featureIrrigationShort: "Irrigation",
   featureFertilizerShort: "Fertilizer",
   featurePesticideShort: "Protection",
@@ -152,6 +155,28 @@ export const t = {
   logModuleReady: "Module Infrastructure Ready",
   logStatusLabel: "Status:",
   logTotalFieldsLabel: "Total Defined Fields:",
+
+  // The assistant, reachable from the tool bar and from the modules
+  assistant: {
+    title: "Ask the Assistant",
+    ask: "Ask the assistant",
+    placeholder: "Ask about this field…",
+    send: "Send",
+    thinking: "Thinking…",
+    newChat: "Start over",
+    // Shown once, before anything has been asked.
+    intro: "Ask about your fields, your soil reports or what to apply. The assistant answers against the records in this workspace.",
+    // What the next question will be answered against.
+    contextGeneral: "All fields",
+    contextFertilizer: "Fertilization",
+    contextSoil: "Soil analysis",
+    answeredBy: "Answered by {model}",
+    // A dosage is the farmer's call, and a model does not walk the field.
+    disclaimer: "Guidance, not a prescription — check it against your own agronomist.",
+    failed: "The assistant could not answer. Please try again.",
+    unconfigured: "The assistant is not set up on this server yet.",
+    retry: "Try again",
+  },
 
   // Fertilization module
   fertilizer: {

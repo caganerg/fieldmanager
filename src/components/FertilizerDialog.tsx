@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Activity, CalendarDays, FlaskConical, Plus, Trash2 } from "lucide-react";
+import { Activity, CalendarDays, FlaskConical, Plus, Sparkles, Trash2 } from "lucide-react";
 import { t } from "@/lib/translations";
 import { createId } from "@/lib/utils";
 import { type FieldPolygon } from "@/components/Map";
@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useFieldData } from "@/components/FieldDataProvider";
+import { useAssistant } from "@/components/AssistantProvider";
 import SoilReadingTile from "@/components/SoilReadingTile";
 import {
   SOIL_INORGANIC_KEYS,
@@ -54,6 +55,7 @@ export default function FertilizerDialog({
   // Both the records and the analyses they are read against are field data, so
   // they come from the server-backed store rather than from this browser.
   const { fertilizerLogs, setFertilizerLogs, soilAnalyses } = useFieldData();
+  const { openAssistant } = useAssistant();
 
   const [draft, setDraft] = useState({
     fieldId: "",
@@ -111,6 +113,24 @@ export default function FertilizerDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
+          {/* The same assistant the tool bar opens, pointed at this field and
+              this topic — so the question arrives with the readings below it
+              already in front of the model. */}
+          <button
+            type="button"
+            onClick={() =>
+              openAssistant({
+                topic: "fertilizer",
+                fieldId: draft.fieldId,
+                fieldName: fields.find((field) => field.id === draft.fieldId)?.name ?? "",
+              })
+            }
+            className="w-full flex items-center justify-center gap-1.5 text-[11px] font-medium py-1.5 rounded-lg border border-violet-200 dark:border-violet-900/60 bg-violet-50/60 dark:bg-violet-950/30 text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-950/60 transition-colors cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            {t.assistant.ask}
+          </button>
+
           {/* What the soil already holds. A dosage picked without it is a guess,
               so it sits above the form rather than behind the soil module. */}
           <div className="p-3 rounded-xl border border-emerald-100 dark:border-emerald-900/50 bg-emerald-50/60 dark:bg-emerald-950/30">
