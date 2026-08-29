@@ -16,25 +16,23 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useFieldData } from "@/components/FieldDataProvider";
+import SoilReadingTile from "@/components/SoilReadingTile";
 import {
   SOIL_PARAMETERS,
   SOIL_SUMMARY_KEYS,
   SOIL_TEXTURES,
-  byNewestSample,
+  analysesForField,
   createDraft,
   hasAnyMeasurement,
   levelBadgeClass,
   rateMeasurement,
+  soilParameter,
   type SoilDraft,
-  type SoilMeasurementKey,
   type SoilParameter,
 } from "@/lib/soil";
 
 const MACRO_PARAMETERS = SOIL_PARAMETERS.filter((parameter) => parameter.group === "macro");
 const MICRO_PARAMETERS = SOIL_PARAMETERS.filter((parameter) => parameter.group === "micro");
-const PARAMETERS_BY_KEY = new Map<SoilMeasurementKey, SoilParameter>(
-  SOIL_PARAMETERS.map((parameter) => [parameter.key, parameter])
-);
 
 const SELECT_CLASS =
   "w-full text-xs rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2 py-1.5 text-zinc-800 dark:text-zinc-200 outline-none disabled:opacity-60";
@@ -141,10 +139,7 @@ export default function SoilAnalysisDialog({
   }, [open, selectedFieldId, fields]);
 
   const fieldAnalyses = useMemo(
-    () =>
-      analyses
-        .filter((analysis) => analysis.fieldId === draft.fieldId)
-        .sort(byNewestSample),
+    () => analysesForField(analyses, draft.fieldId),
     [analyses, draft.fieldId]
   );
   const latest = fieldAnalyses[0];
@@ -207,37 +202,9 @@ export default function SoilAnalysisDialog({
                 </span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {SOIL_SUMMARY_KEYS.map((key) => {
-                  const parameter = PARAMETERS_BY_KEY.get(key);
-                  if (!parameter) return null;
-                  const value = latest[key];
-                  const rating = rateMeasurement(parameter, value);
-                  return (
-                    <div
-                      key={key}
-                      className="rounded-lg bg-white/80 dark:bg-zinc-900/70 px-2 py-1.5 min-w-0"
-                    >
-                      <div className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
-                        {parameter.label}
-                      </div>
-                      <div className="text-sm font-bold text-zinc-800 dark:text-zinc-100">
-                        {rating ? value : "—"}
-                        {rating && parameter.unit && (
-                          <span className="text-[10px] font-normal text-zinc-400 ml-1">
-                            {parameter.unit}
-                          </span>
-                        )}
-                      </div>
-                      {rating && (
-                        <span
-                          className={`inline-block mt-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${levelBadgeClass(rating.level)}`}
-                        >
-                          {rating.label}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
+                {SOIL_SUMMARY_KEYS.map((key) => (
+                  <SoilReadingTile key={key} measurementKey={key} value={latest[key]} />
+                ))}
               </div>
             </div>
           )}
@@ -427,8 +394,7 @@ export default function SoilAnalysisDialog({
                         </button>
                         <span className="flex items-center gap-2 shrink-0">
                           {SOIL_SUMMARY_KEYS.slice(0, 2).map((key) => {
-                            const parameter = PARAMETERS_BY_KEY.get(key);
-                            if (!parameter) return null;
+                            const parameter = soilParameter(key);
                             const rating = rateMeasurement(parameter, analysis[key]);
                             if (!rating) return null;
                             return (

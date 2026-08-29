@@ -12,23 +12,20 @@ import {
   ChevronDown,
   X,
   Layers,
-  Plus,
   Info,
   ChevronRight,
   GripVertical,
   Pin,
-  PinOff,
-  Trash2
+  PinOff
 } from "lucide-react";
 import { t } from "@/lib/translations";
 import { type FieldPolygon } from "@/components/Map";
 import { DEFAULT_CENTER } from "@/lib/map-constants";
 import { getPolygonCenter } from "@/lib/geo";
-import { createId } from "@/lib/utils";
 import WeatherDashboard from "@/components/WeatherDashboard";
 import IrrigationDialog from "@/components/IrrigationDialog";
+import FertilizerDialog from "@/components/FertilizerDialog";
 import SoilAnalysisDialog from "@/components/SoilAnalysisDialog";
-import { useFieldData } from "@/components/FieldDataProvider";
 import {
   Dialog,
   DialogContent,
@@ -37,8 +34,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 
 const PINNED_STORAGE_KEY = "fieldmanager-pinned-tools";
 
@@ -196,17 +191,6 @@ export default function ToolsBar({
     }
   }, [pinnedIds, pinnedLoaded]);
 
-  // Fertilizer records are part of the field data the server keeps, so they
-  // come from the provider rather than from this browser.
-  const { fertilizerLogs, setFertilizerLogs } = useFieldData();
-
-  const [newFertilizer, setNewFertilizer] = useState({
-    fieldId: selectedFieldId || fields[0]?.id || "",
-    type: "Urea (46% N)",
-    amount: "15",
-    date: new Date().toISOString().split("T")[0],
-  });
-
   // One handler for whichever popover is up. Both live inside `rootRef`, so a
   // click anywhere else — including on the other trigger — dismisses it. The
   // old pair of handlers treated the Tools folder as "inside" the weather
@@ -234,21 +218,12 @@ export default function ToolsBar({
     .filter((item): item is ToolItem => Boolean(item));
   const menuItems = TOOL_ITEMS.filter((item) => !pinnedIds.includes(item.id));
 
-  const defaultFieldId = selectedFieldId || fields[0]?.id || "";
-
   const handleToolClick = (id: string) => {
     if (id === "weather") {
       setOpenPanel((panel) => (panel === "weather" ? null : "weather"));
       return;
     }
     setOpenPanel(null);
-    // Point the fertilizer form at whatever field is selected right now. It used
-    // to keep the id captured when the component first mounted, so opening the
-    // dialog after picking a different field still showed the old one. The
-    // irrigation dialog does the same for itself when it opens.
-    if (id === "fertilizer") {
-      setNewFertilizer((prev) => ({ ...prev, fieldId: defaultFieldId }));
-    }
     setActiveModal(id);
   };
 
@@ -356,24 +331,7 @@ export default function ToolsBar({
     </div>
   );
 
-  const handleAddFertilizer = (e: React.FormEvent) => {
-    e.preventDefault();
-    const field = fields.find((f) => f.id === newFertilizer.fieldId) || fields[0];
-    if (!field) return;
-    setFertilizerLogs((prev) => [
-      {
-        id: createId(),
-        fieldName: field.name,
-        date: newFertilizer.date,
-        type: newFertilizer.type,
-        amount: `${newFertilizer.amount} kg/da`,
-      },
-      ...prev,
-    ]);
-  };
-
   const isDraggingPinned = draggingId !== null && pinnedIds.includes(draggingId);
-  const hasFields = fields.length > 0;
 
   // Marks the gap the dragged tool would drop into.
   const dropMarker = (index: number) =>
@@ -599,144 +557,13 @@ export default function ToolsBar({
         selectedFieldId={selectedFieldId}
       />
 
-      {/* 2. Fertilization Modal */}
-      <Dialog open={activeModal === "fertilizer"} onOpenChange={(open) => !open && setActiveModal(null)}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
-              <FlaskConical className="w-5 h-5" />
-              {t.featureFertilizer}
-            </DialogTitle>
-            <DialogDescription>
-              {t.featureFertilizerDesc}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            {/* Quick Add Fertilizer Form */}
-            <form onSubmit={handleAddFertilizer} className="p-3.5 bg-amber-50/60 dark:bg-amber-950/30 rounded-xl border border-amber-100 dark:border-amber-900/50 space-y-3">
-              <h4 className="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wide flex items-center gap-1.5">
-                <Plus className="w-3.5 h-3.5" />
-                {t.logAddFertilizer}
-              </h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">
-                    {t.logField}
-                  </Label>
-                  <select
-                    className="w-full text-xs rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2 py-1.5 text-zinc-800 dark:text-zinc-200 outline-none disabled:opacity-60"
-                    value={newFertilizer.fieldId}
-                    disabled={!hasFields}
-                    onChange={(e) => setNewFertilizer({ ...newFertilizer, fieldId: e.target.value })}
-                  >
-                    {hasFields ? (
-                      fields.map((f) => (
-                        <option key={f.id} value={f.id}>
-                          {f.name}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="">{t.logNoFields}</option>
-                    )}
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">
-                    {t.logFertilizerDosage}
-                  </Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="any"
-                    className="h-8 text-xs bg-white dark:bg-zinc-900"
-                    placeholder="15"
-                    value={newFertilizer.amount}
-                    onChange={(e) => setNewFertilizer({ ...newFertilizer, amount: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">
-                    {t.logFertilizerType}
-                  </Label>
-                  <select
-                    className="w-full text-xs rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-2 py-1.5 text-zinc-800 dark:text-zinc-200 outline-none"
-                    value={newFertilizer.type}
-                    onChange={(e) => setNewFertilizer({ ...newFertilizer, type: e.target.value })}
-                  >
-                    <option value="Urea (46% N)">Urea (46% N)</option>
-                    <option value="DAP (18-46-0)">DAP (18-46-0)</option>
-                    <option value="NPK 15-15-15">NPK 15-15-15</option>
-                    <option value="Ammonium Sulfate">Ammonium Sulfate</option>
-                    <option value="Potassium Nitrate">Potassium Nitrate</option>
-                    <option value="Liquid / Foliar Fertilizer">Liquid / Foliar Fertilizer</option>
-                  </select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">
-                    {t.logApplicationDate}
-                  </Label>
-                  <Input
-                    type="date"
-                    className="h-8 text-xs bg-white dark:bg-zinc-900"
-                    value={newFertilizer.date}
-                    onChange={(e) => setNewFertilizer({ ...newFertilizer, date: e.target.value })}
-                  />
-                </div>
-              </div>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={!hasFields}
-                className="w-full bg-amber-600 hover:bg-amber-700 text-white text-xs h-8"
-              >
-                {t.logSave}
-              </Button>
-              {!hasFields && (
-                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 text-center">{t.logNeedsField}</p>
-              )}
-            </form>
-
-            {/* Recent Logs List */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-                {t.logRecentFertilizer}
-              </h4>
-              <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                {fertilizerLogs.length === 0 ? (
-                  <div className="p-4 text-center text-xs text-zinc-400 bg-zinc-50/50 dark:bg-zinc-900/50 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-800">
-                    {t.logEmptyFertilizer}
-                  </div>
-                ) : (
-                  fertilizerLogs.map((log) => (
-                    <div key={log.id} className="group flex items-center justify-between gap-2 p-2.5 rounded-lg border bg-zinc-50/50 dark:bg-zinc-900/50 text-xs">
-                      <div className="min-w-0">
-                        <span className="font-semibold text-zinc-800 dark:text-zinc-200">{log.fieldName}</span>
-                        <span className="text-zinc-400 ml-2">({log.type})</span>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <span className="font-medium text-amber-600 dark:text-amber-400">{log.amount}</span>
-                        <span className="text-zinc-400">{log.date}</span>
-                        <button
-                          type="button"
-                          onClick={() => setFertilizerLogs((prev) => prev.filter((l) => l.id !== log.id))}
-                          title={t.logDelete}
-                          aria-label={t.logDelete}
-                          className="p-1 rounded-md text-zinc-300 dark:text-zinc-600 hover:text-rose-500 dark:hover:text-rose-400 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* 2. Fertilization */}
+      <FertilizerDialog
+        open={activeModal === "fertilizer"}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        fields={fields}
+        selectedFieldId={selectedFieldId}
+      />
 
       {/* 3. Soil Analysis */}
       <SoilAnalysisDialog

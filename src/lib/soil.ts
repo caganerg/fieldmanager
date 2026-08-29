@@ -240,6 +240,38 @@ export const SOIL_SUMMARY_KEYS: SoilMeasurementKey[] = [
   "potassium",
 ];
 
+/**
+ * The organic / inorganic split, which is how a report reads when a
+ * fertilisation is being written against it: how much of the soil is organic
+ * matter, and what the mineral side of it holds.
+ *
+ * pH and salinity are deliberately in neither list. They describe the state of
+ * the soil rather than a proportion of matter in it, and a dosage is not read
+ * off them. Total nitrogen sits on the mineral side despite being largely
+ * organically bound, because it is the N of the N-P-K the dosage is chosen from.
+ */
+export const SOIL_ORGANIC_KEYS: SoilMeasurementKey[] = ["organicMatter"];
+
+export const SOIL_INORGANIC_KEYS: SoilMeasurementKey[] = [
+  "nitrogen",
+  "phosphorus",
+  "potassium",
+  "lime",
+  "iron",
+  "zinc",
+  "manganese",
+  "copper",
+];
+
+const PARAMETERS_BY_KEY = Object.fromEntries(
+  SOIL_PARAMETERS.map((parameter) => [parameter.key, parameter])
+) as Record<SoilMeasurementKey, SoilParameter>;
+
+/** The definition behind a measurement key: its label, unit and bands. */
+export function soilParameter(key: SoilMeasurementKey): SoilParameter {
+  return PARAMETERS_BY_KEY[key];
+}
+
 export function parseMeasurement(value: string): number | null {
   const trimmed = value.trim();
   if (trimmed === "") return null;
@@ -263,6 +295,18 @@ export function hasAnyMeasurement(analysis: Pick<SoilAnalysis, SoilMeasurementKe
   return SOIL_PARAMETERS.some(
     (parameter) => parseMeasurement(analysis[parameter.key]) !== null
   );
+}
+
+/**
+ * Which of `keys` the report actually carries a reading for. A lab omits
+ * whatever was not ordered, so a caller that wants to draw only the measured
+ * values filters through this rather than rendering a row of blanks.
+ */
+export function measuredKeys(
+  analysis: Pick<SoilAnalysis, SoilMeasurementKey>,
+  keys: readonly SoilMeasurementKey[]
+): SoilMeasurementKey[] {
+  return keys.filter((key) => parseMeasurement(analysis[key]) !== null);
 }
 
 const LEVEL_BADGES: Record<SoilLevel, string> = {
@@ -346,6 +390,17 @@ export function sanitizeAnalyses(value: unknown): SoilAnalysis[] {
     });
   }
   return result;
+}
+
+/**
+ * Every analysis recorded for one field, newest sample first — so `[0]` is the
+ * report that describes the soil as it stands. A blank id matches nothing on
+ * purpose: it is what an empty field list leaves in a form, not a field whose
+ * analyses should be shown.
+ */
+export function analysesForField(analyses: SoilAnalysis[], fieldId: string): SoilAnalysis[] {
+  if (fieldId === "") return [];
+  return analyses.filter((analysis) => analysis.fieldId === fieldId).sort(byNewestSample);
 }
 
 /** Newest sample first; records without a usable date sort to the bottom. */

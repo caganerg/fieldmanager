@@ -145,22 +145,33 @@ export const t = {
   featureModalTitle: "Module Detail",
   featureModalPlaceholder: "This feature module is prepared and ready for integration. You can connect your custom logic and data here.",
 
-  // Fertilization record keeping
-  logAddFertilizer: "Add Fertilization Record",
+  // Shared by every module dialog that picks a field to record against.
   logField: "Field",
   logNoFields: "No fields yet",
-  logDate: "Date",
-  logFertilizerDosage: "Dosage (kg/da)",
-  logFertilizerType: "Fertilizer Type",
-  logApplicationDate: "Application Date",
-  logSave: "Save Record",
-  logRecentFertilizer: "Recent Fertilization Logs",
-  logEmptyFertilizer: "No fertilization records yet. Add one above.",
-  logNeedsField: "Draw a field on the map before adding records.",
-  logDelete: "Delete record",
+
   logModuleReady: "Module Infrastructure Ready",
   logStatusLabel: "Status:",
   logTotalFieldsLabel: "Total Defined Fields:",
+
+  // Fertilization module
+  fertilizer: {
+    addTitle: "Add Fertilization Record",
+    dosage: "Dosage (kg/da)",
+    type: "Fertilizer Type",
+    date: "Application Date",
+    save: "Save Record",
+    historyTitle: "Recent Fertilization Logs",
+    empty: "No fertilization records yet. Add one above.",
+    needsField: "Draw a field on the map before adding records.",
+    delete: "Delete record",
+
+    // The soil report the dosage is being chosen against.
+    soilTitle: "Soil Analysis",
+    soilOrganic: "Organic",
+    soilInorganic: "Mineral (inorganic)",
+    soilEmpty: "No soil analysis recorded for this field yet.",
+    soilNoReadings: "The latest analysis for this field carries no organic or mineral readings.",
+  },
 
   // Irrigation module
   irrigation: {
