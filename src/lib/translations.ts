@@ -47,7 +47,7 @@ export const t = {
   licenseDesc: "Licensed under the MIT License",
   noWarranty: "This program comes with ABSOLUTELY NO WARRANTY.",
   versionLabel: "Version",
-  contributorsLabel: "Çağan ERGÜN",
+  contributorsLabel: "Field Manager",
   
   groupDetail: "Group Detail",
   newFieldDetail: "New Field Detail",
