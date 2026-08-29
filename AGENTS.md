@@ -174,13 +174,38 @@ travelling beside the turns, `assistant` vs Gemini's `model`, the first turn
 having to be the user's). Adding the third adapter should not require touching
 it.
 
-`src/app/api/ai/route.ts` is written except for the vendor call, which is marked
-in the file. It reads `FIELDMANAGER_AI_PROVIDER`, `FIELDMANAGER_AI_API_KEY` and
-`FIELDMANAGER_AI_MODEL` from the server environment and answers `503` with
-`unconfigured: true` when they are unset, which is what makes the dialog say the
-assistant is not set up rather than look broken.
+`src/app/api/ai/route.ts` reads `FIELDMANAGER_AI_PROVIDER`,
+`FIELDMANAGER_AI_API_KEY` and `FIELDMANAGER_AI_MODEL` from the server
+environment and answers `503` with `unconfigured: true` when they are unset,
+which is what makes the dialog say the assistant is not set up rather than look
+broken. It handles the session, the limits and the error mapping; the two halves
+below it are what actually answer.
 
-Two rules to keep if you write that adapter:
+`src/lib/server/ai-context.ts` builds the system prompt by reading the stored
+document, and the topic is what narrows it. A `fertilizer` question gets that
+field's applications together with its latest analysis and its recent watering —
+the analysis says what the soil holds and the log says what has been added, and
+neither answers a dosage question alone. A `soil` question gets the reports and
+not the applications. A `general` one gets a register of the fields and the
+record counts, and none of the detail. Measurements are rendered with the band
+they fall in ("Organic Matter 1.4 % (Low)") using the same `rateMeasurement`
+the dialogs display, so the answer and the screen cannot disagree about what
+counts as low. The caps at the top of the file are a token budget, not a
+formality: every line is billed on every turn of the conversation.
+
+`src/lib/server/ai-providers.ts` holds one adapter per vendor behind one
+signature. Claude goes through the official `@anthropic-ai/sdk`; OpenAI and
+Gemini go over plain HTTP. That asymmetry is deliberate — hand-rolling the
+Anthropic call would mean reimplementing its retries and typed errors, while two
+more SDKs to send one POST each would cost more than they return. Provider
+errors become an `AiProviderError` carrying a status; the vendor's own response
+body is logged rather than returned, because it can quote the request, and the
+request holds the farm's records. `thinking` is deliberately not sent: the model
+is operator configuration, so the code cannot know which family it is talking
+to, and the parameter is rejected by some models and required in an older shape
+by others.
+
+Two rules to keep:
 
 - The key, the provider and the model come from the server environment only.
   There is no settings field for them and the route must not accept them from

@@ -8,15 +8,17 @@ import {
   MAX_QUESTION_CHARS,
   type AiProvider,
 } from "@/lib/ai";
+import { buildSystemPrompt } from "@/lib/server/ai-context";
+import { AiProviderError, askProvider } from "@/lib/server/ai-providers";
 import { requireAccount } from "@/lib/server/session";
 
 /**
  * The assistant endpoint.
  *
- * Everything except the vendor call is written: the session check, the limits,
- * the validation and the shape of both answers. What is missing is the adapter
- * that turns a validated `AssistantAsk` into an OpenAI, Gemini or Claude
- * request — see the marked section at the bottom.
+ * The session check and the limits are here, the prompt is built from the
+ * stored document by `ai-context.ts`, and the vendor call is one of the three
+ * adapters in `ai-providers.ts`. This handler is the part that does not change
+ * when a fourth vendor is added.
  *
  * The key is read from the server environment and never leaves it, the same
  * rule the weather route follows. There is no settings field for it and the
@@ -133,21 +135,32 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // ---------------------------------------------------------------------
-  // The adapter goes here.
-  //
-  // The request is valid and the provider is configured by this point, so what
-  // is left is one function per vendor with the same signature: take the topic,
-  // the field id and `messages`, build the system prompt from the stored
-  // document (`readDocument()` in `@/lib/server/data-store`), call the vendor,
-  // and return `{ reply, provider, model }`. The differences to absorb are the
-  // ones `@/lib/ai` documents — where the system prompt goes, what the second
-  // role is called, and where the text sits in the response.
-  //
-  // Nothing above this line should need to change to add the third vendor.
-  // ---------------------------------------------------------------------
-  return NextResponse.json(
-    { error: "The assistant back end is not implemented yet." },
-    { status: 501 }
-  );
+  const fieldId = typeof payload.fieldId === "string" ? payload.fieldId.slice(0, 64) : "";
+
+  try {
+    // The prompt is assembled from the stored document here on the server. The
+    // request named a topic and a field; what those mean in terms of analyses
+    // and applications is not the client's to decide.
+    const system = await buildSystemPrompt(payload.topic, fieldId);
+    const reply = await askProvider(config.provider, {
+      apiKey: config.apiKey,
+      model: config.model,
+      system,
+      messages,
+    });
+
+    return NextResponse.json(
+      { reply, provider: config.provider, model: config.model },
+      { headers: { "Cache-Control": "no-store" } }
+    );
+  } catch (error) {
+    if (error instanceof AiProviderError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    // Anything else is ours — a missing data file, a bug in the prompt builder.
+    // The detail goes to the log rather than the browser: it can quote the farm
+    // records the prompt was built from.
+    console.error("Assistant failure:", error instanceof Error ? error.message : error);
+    return NextResponse.json({ error: "The assistant could not answer." }, { status: 500 });
+  }
 }

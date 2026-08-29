@@ -30,6 +30,14 @@ chmod 600 .env.local        # the file holds a secret
 $EDITOR .env.local
 ```
 
+The assistant — the "Ask AI" tool and the buttons in the fertilization and soil
+modules — is configured in the same file and is optional. Set
+`FIELDMANAGER_AI_PROVIDER` (`anthropic`, `openai` or `gemini`),
+`FIELDMANAGER_AI_API_KEY` and `FIELDMANAGER_AI_MODEL` to switch it on; leave
+them unset and the app says the assistant is not set up on this server. Like the
+weather key, all three are read on the server and there is no in-app field for
+them.
+
 Start the development server:
 
 ```bash
