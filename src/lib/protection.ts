@@ -14,13 +14,28 @@ import { t } from "@/lib/translations";
 export const PROTECTION_METHODS = ["biological", "chemical"] as const;
 export type ProtectionMethod = (typeof PROTECTION_METHODS)[number];
 
+export const PROTECTION_STATUSES = ["planned", "applied"] as const;
+export type ProtectionStatus = (typeof PROTECTION_STATUSES)[number];
+
 export interface ProtectionLog {
   id: string;
   fieldId: string;
   // Denormalised so a record still reads correctly after its field is renamed
   // or deleted; the id is what links it back while the field still exists.
   fieldName: string;
-  /** The day of the treatment, as `YYYY-MM-DD`. */
+  /**
+   * Whether the treatment has happened or is still due.
+   *
+   * It is a state on one record rather than two lists, because a plan becomes
+   * an application without becoming a different thing: the field, the product,
+   * the target and the dose are all decided when it is planned, and carrying it
+   * out changes only whether it has happened.
+   */
+  status: ProtectionStatus;
+  /**
+   * The day of the treatment, as `YYYY-MM-DD` — the day it was carried out, or
+   * the day it is planned for. Which one it means is what `status` says.
+   */
   date: string;
   method: ProtectionMethod;
   /**
@@ -72,6 +87,17 @@ function normalizeMethod(value: unknown): ProtectionMethod {
   return value === "biological" ? "biological" : "chemical";
 }
 
+/**
+ * An unreadable status falls back to applied, for two reasons that point the
+ * same way. Records written before the module told the two apart were all
+ * treatments already carried out, so that is the right thing to call them now.
+ * And of the two mistakes, reading a real application as merely planned is the
+ * dangerous one: it invites a second spray of something already sprayed.
+ */
+function normalizeStatus(value: unknown): ProtectionStatus {
+  return value === "planned" ? "planned" : "applied";
+}
+
 export function sanitizeProtectionLogs(value: unknown): ProtectionLog[] {
   if (!Array.isArray(value)) return [];
   const result: ProtectionLog[] = [];
@@ -83,6 +109,7 @@ export function sanitizeProtectionLogs(value: unknown): ProtectionLog[] {
       id: source.id.slice(0, 64),
       fieldId: readString(source.fieldId, 64),
       fieldName: readString(source.fieldName, MAX_NAME),
+      status: normalizeStatus(source.status),
       date: isoDay(source.date),
       method: normalizeMethod(source.method),
       agent: readString(source.agent, MAX_NAME),
@@ -96,6 +123,15 @@ export function sanitizeProtectionLogs(value: unknown): ProtectionLog[] {
 
 export function methodLabel(method: ProtectionMethod): string {
   return t.protection.methods[method];
+}
+
+export function statusLabel(status: ProtectionStatus): string {
+  return t.protection.statuses[status];
+}
+
+/** The date field means a different day in each state, so it is labelled so. */
+export function dateLabel(status: ProtectionStatus): string {
+  return status === "planned" ? t.protection.plannedDate : t.protection.date;
 }
 
 /** What the "what was applied" field is called, which is method-dependent. */
@@ -131,6 +167,16 @@ export function byNewestTreatment(a: ProtectionLog, b: ProtectionLog): number {
   return right - left;
 }
 
+/** Soonest first; records without a usable date sort to the bottom. */
+export function bySoonestPlanned(a: ProtectionLog, b: ProtectionLog): number {
+  const left = Date.parse(a.date);
+  const right = Date.parse(b.date);
+  if (Number.isNaN(left) && Number.isNaN(right)) return 0;
+  if (Number.isNaN(left)) return 1;
+  if (Number.isNaN(right)) return -1;
+  return left - right;
+}
+
 /**
  * Every treatment recorded for one field, newest first. A blank id matches
  * nothing on purpose: it is what an empty field list leaves in a form, not a
@@ -141,6 +187,26 @@ export function treatmentsForField(logs: ProtectionLog[], fieldId: string): Prot
   return logs.filter((log) => log.fieldId === fieldId).sort(byNewestTreatment);
 }
 
+export interface ProtectionSplit {
+  planned: ProtectionLog[];
+  applied: ProtectionLog[];
+}
+
+/**
+ * The two states, each in the order that state is read in.
+ *
+ * A plan is about the future, so the nearest one matters most and they run
+ * soonest first; a record of what was done is about the past, so the most
+ * recent matters most and they run newest first. One mixed list ordered either
+ * way buries half of itself.
+ */
+export function splitByStatus(logs: ProtectionLog[]): ProtectionSplit {
+  return {
+    planned: logs.filter((log) => log.status === "planned").sort(bySoonestPlanned),
+    applied: logs.filter((log) => log.status === "applied").sort(byNewestTreatment),
+  };
+}
+
 /** The form state. */
 export type ProtectionDraft = Omit<ProtectionLog, "id" | "fieldName">;
 
@@ -148,6 +214,7 @@ export function createDraft(fieldId: string): ProtectionDraft {
   return {
     fieldId,
     date: new Date().toISOString().slice(0, 10),
+    status: "applied",
     method: "chemical",
     agent: "",
     target: "",

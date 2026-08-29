@@ -7,8 +7,8 @@ import {
 } from "@/lib/soil";
 import { byNewestIrrigation, methodLabel as irrigationMethodLabel } from "@/lib/irrigation";
 import {
-  byNewestTreatment,
   methodLabel,
+  splitByStatus,
   treatmentsForField,
   type ProtectionLog,
 } from "@/lib/protection";
@@ -162,7 +162,7 @@ const TOPIC_RULES: Record<AssistantTopic, string> = {
     "The question is about fertilisation. Read the applications already made together with the latest soil analysis: the analysis says what the soil holds, the log says what has been added to it, and a recommendation has to account for both.",
   soil: "The question is about soil analysis. The reports below carry each measurement with the band it falls in, using the classification the application itself displays.",
   protection:
-    "The question is about crop protection. Each treatment below says which approach was used — biological, meaning a beneficial organism was released, or chemical, meaning a product was sprayed — along with what was applied, what it was aimed at and at what dose. Both the product and the beneficial were typed by the grower, so treat the spelling as theirs and do not correct a name into a different one. Where a run of sprays repeats the same product against the same pest, resistance is worth raising; where a biological treatment is in play, say plainly if a chemical suggestion would undo it.",
+    "The question is about crop protection. The treatments are in two lists: what has been carried out, and what is only planned and has not happened yet. Never treat a planned treatment as done — if the answer depends on one going ahead, say so. Each entry says which approach was used — biological, meaning a beneficial organism was released, or chemical, meaning a product was sprayed — along with what was applied, what it was aimed at and at what dose. Both the product and the beneficial were typed by the grower, so treat the spelling as theirs and do not correct a name into a different one. Where a run of sprays repeats the same product against the same pest, resistance is worth raising; where a biological treatment is in play, say plainly if a chemical suggestion would undo it.",
 };
 
 /**
@@ -239,16 +239,25 @@ export async function buildSystemPrompt(
   }
 
   if (topic === "protection") {
-    const treatments = (
-      field
-        ? treatmentsForField(document.protectionLogs, field.id)
-        : [...document.protectionLogs].sort(byNewestTreatment)
-    ).slice(0, MAX_PROTECTION_LOGS);
+    // The two states go in as two sections rather than one list with a status
+    // word on each line. A plan has not happened, and the difference is the one
+    // thing the model must not blur: advising on the strength of a spray that
+    // was only ever pencilled in is the failure worth designing against.
+    const { planned, applied } = splitByStatus(
+      field ? treatmentsForField(document.protectionLogs, field.id) : document.protectionLogs
+    );
     records.push(
       section(
-        "CROP PROTECTION APPLIED (most recent first)",
-        treatments.map(describeProtectionLog),
-        "No treatment has been recorded for this scope."
+        "CROP PROTECTION CARRIED OUT (most recent first)",
+        applied.slice(0, MAX_PROTECTION_LOGS).map(describeProtectionLog),
+        "No treatment has been carried out for this scope."
+      )
+    );
+    records.push(
+      section(
+        "CROP PROTECTION PLANNED, NOT YET CARRIED OUT (soonest first)",
+        planned.slice(0, MAX_PROTECTION_LOGS).map(describeProtectionLog),
+        "Nothing is planned for this scope."
       )
     );
   }

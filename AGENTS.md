@@ -189,8 +189,11 @@ the analysis says what the soil holds and the log says what has been added, and
 neither answers a dosage question alone. A `soil` question gets the reports and
 not the applications. A `protection` one gets that field's treatments, each
 named by its method, because whether a beneficial was released or a product was
-sprayed is what the answer turns on. A `general` one gets a register of the
-fields and the record counts, and none of the detail. Measurements are rendered with the band
+sprayed is what the answer turns on, and it arrives as two lists — carried out
+and planned — because a plan has not happened and advising on the strength of a
+spray that was only pencilled in is the failure worth designing against. A
+`general` one gets a register of the fields and the record counts, and none of
+the detail. Measurements are rendered with the band
 they fall in ("Organic Matter 1.4 % (Low)") using the same `rateMeasurement`
 the dialogs display, so the answer and the screen cannot disagree about what
 counts as low. The caps at the top of the file are a token budget, not a

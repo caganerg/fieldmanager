@@ -183,13 +183,27 @@ export const t = {
   protection: {
     addTitle: "Record a Treatment",
     historyTitle: "Treatment History",
-    empty: "No treatment recorded for this field yet.",
     needsField: "Draw a field on the map before recording a treatment.",
     needsAgent: "Enter what was applied before saving.",
     save: "Save Record",
     delete: "Delete record",
     date: "Treatment Date",
     method: "Method",
+
+    // A treatment is either one that has happened or one that is still due.
+    status: "Status",
+    statuses: {
+      planned: "Planned",
+      applied: "Applied",
+    },
+    plannedDate: "Planned Date",
+    plannedTitle: "Planned",
+    appliedTitle: "Carried Out",
+    emptyPlanned: "Nothing planned for this field.",
+    emptyApplied: "No treatment carried out on this field yet.",
+    markApplied: "Mark as carried out",
+    nextPlanned: "Next planned",
+    plannedCount: "Planned",
     methods: {
       biological: "Biological control",
       chemical: "Chemical control",
@@ -208,7 +222,7 @@ export const t = {
     notes: "Notes",
     notesPlaceholder: "Weather, equipment, what was observed afterwards…",
     lastTitle: "Last Treatment",
-    totalTreatments: "Treatments recorded",
+    totalTreatments: "Carried out",
     biologicalShare: "Biological",
   },
 

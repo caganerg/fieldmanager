@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Bug, CalendarDays, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Bug, CalendarClock, CalendarDays, Check, Plus, Sparkles, Trash2 } from "lucide-react";
 
 import { t } from "@/lib/translations";
 import { createId } from "@/lib/utils";
@@ -20,14 +20,19 @@ import { useFieldData } from "@/components/FieldDataProvider";
 import { useAssistant } from "@/components/AssistantProvider";
 import {
   PROTECTION_METHODS,
+  PROTECTION_STATUSES,
   agentLabel,
   agentPlaceholder,
   createDraft,
+  dateLabel,
   dosePlaceholder,
   methodBadgeClass,
   methodLabel,
+  splitByStatus,
+  statusLabel,
   treatmentsForField,
   type ProtectionDraft,
+  type ProtectionLog,
   type ProtectionMethod,
 } from "@/lib/protection";
 
@@ -39,6 +44,94 @@ interface ProtectionDialogProps {
   onOpenChange: (open: boolean) => void;
   fields: FieldPolygon[];
   selectedFieldId: string | null;
+}
+
+/**
+ * One of the two lists. Both draw the same row — the state is what differs, and
+ * only a planned treatment offers the button that carries it out.
+ */
+function TreatmentList({
+  title,
+  logs,
+  empty,
+  onMarkApplied,
+  onDelete,
+}: {
+  title: string;
+  logs: ProtectionLog[];
+  empty: string;
+  onMarkApplied?: (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <h4 className="flex items-center gap-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+        {title}
+        {logs.length > 0 && (
+          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+            {logs.length}
+          </span>
+        )}
+      </h4>
+      <div className="space-y-1.5 max-h-56 overflow-y-auto">
+        {logs.length === 0 ? (
+          <div className="p-4 text-center text-xs text-zinc-400 bg-zinc-50/50 dark:bg-zinc-900/50 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-800">
+            {empty}
+          </div>
+        ) : (
+          logs.map((log) => (
+            <div
+              key={log.id}
+              className="group flex items-start justify-between gap-2 p-2.5 rounded-lg border bg-zinc-50/50 dark:bg-zinc-900/50 text-xs"
+            >
+              <div className="min-w-0 space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span
+                    className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${methodBadgeClass(log.method)}`}
+                  >
+                    {methodLabel(log.method)}
+                  </span>
+                  <span className="font-semibold text-zinc-800 dark:text-zinc-200">
+                    {log.agent}
+                  </span>
+                  {log.target && <span className="text-zinc-400">→ {log.target}</span>}
+                </div>
+                {log.notes && (
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{log.notes}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                {log.dose && (
+                  <span className="font-medium text-rose-600 dark:text-rose-400">{log.dose}</span>
+                )}
+                <span className="text-zinc-400">{log.date || "—"}</span>
+                {onMarkApplied && (
+                  <button
+                    type="button"
+                    onClick={() => onMarkApplied(log.id)}
+                    title={t.protection.markApplied}
+                    aria-label={t.protection.markApplied}
+                    className="p-1 rounded-md text-zinc-300 dark:text-zinc-600 hover:text-emerald-600 dark:hover:text-emerald-400 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity cursor-pointer"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => onDelete(log.id)}
+                  title={t.protection.delete}
+                  aria-label={t.protection.delete}
+                  className="p-1 rounded-md text-zinc-300 dark:text-zinc-600 hover:text-rose-500 dark:hover:text-rose-400 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function ProtectionDialog({
@@ -64,12 +157,13 @@ export default function ProtectionDialog({
     setError(null);
   }, [open, selectedFieldId, fields]);
 
-  const history = useMemo(
-    () => treatmentsForField(protectionLogs, draft.fieldId),
+  const { planned, applied } = useMemo(
+    () => splitByStatus(treatmentsForField(protectionLogs, draft.fieldId)),
     [protectionLogs, draft.fieldId]
   );
-  const last = history[0];
-  const biologicalCount = history.filter((log) => log.method === "biological").length;
+  const last = applied[0];
+  const next = planned[0];
+  const biologicalCount = applied.filter((log) => log.method === "biological").length;
 
   const set = <K extends keyof ProtectionDraft>(key: K, value: ProtectionDraft[K]) => {
     setDraft((prev) => ({ ...prev, [key]: value }));
@@ -101,11 +195,31 @@ export default function ProtectionDialog({
       },
       ...prev,
     ]);
-    // Keep the field and the method — a second treatment entered in the same
-    // sitting is usually the same kind on the same parcel — and clear the rest.
-    setDraft((prev) => ({ ...createDraft(prev.fieldId), method: prev.method, date: prev.date }));
+    // Keep the field, the method and the state — a second treatment entered in
+    // the same sitting is usually the same kind on the same parcel — and clear
+    // the rest.
+    setDraft((prev) => ({
+      ...createDraft(prev.fieldId),
+      method: prev.method,
+      status: prev.status,
+      date: prev.date,
+    }));
     setError(null);
   };
+
+  /**
+   * Carrying out a plan changes only whether it has happened. The date is left
+   * as the grower entered it rather than moved to today: it is a day they chose
+   * and most plans are carried out on it, so rewriting it would lose what they
+   * said in exchange for a guess.
+   */
+  const markApplied = (id: string) =>
+    setProtectionLogs((prev) =>
+      prev.map((log) => (log.id === id ? { ...log, status: "applied" as const } : log))
+    );
+
+  const removeLog = (id: string) =>
+    setProtectionLogs((prev) => prev.filter((log) => log.id !== id));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -136,6 +250,37 @@ export default function ProtectionDialog({
             {t.assistant.ask}
           </button>
 
+          {/* The next thing due on this field, which is the one a plan exists
+              to be looked at for. */}
+          {next && (
+            <div className="p-3 rounded-xl border border-sky-100 dark:border-sky-900/50 bg-sky-50/60 dark:bg-sky-950/30">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wide text-sky-800 dark:text-sky-300 flex items-center gap-1.5">
+                  <CalendarClock className="w-3.5 h-3.5" />
+                  {t.protection.nextPlanned}
+                </span>
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                  {next.date || "—"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span
+                  className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${methodBadgeClass(next.method)}`}
+                >
+                  {methodLabel(next.method)}
+                </span>
+                <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100">
+                  {next.agent}
+                </span>
+                {next.target && (
+                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    → {next.target}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* What was last done to this field, so the form opens with context. */}
           {last && (
             <div className="p-3 rounded-xl border border-rose-100 dark:border-rose-900/50 bg-rose-50/60 dark:bg-rose-950/30">
@@ -163,14 +308,18 @@ export default function ProtectionDialog({
                   </span>
                 )}
               </div>
-              <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+              <div className="mt-2 grid grid-cols-3 gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
                 <span>
                   {t.protection.totalTreatments}:{" "}
-                  <strong className="text-zinc-700 dark:text-zinc-200">{history.length}</strong>
+                  <strong className="text-zinc-700 dark:text-zinc-200">{applied.length}</strong>
                 </span>
                 <span>
                   {t.protection.biologicalShare}:{" "}
                   <strong className="text-zinc-700 dark:text-zinc-200">{biologicalCount}</strong>
+                </span>
+                <span>
+                  {t.protection.plannedCount}:{" "}
+                  <strong className="text-zinc-700 dark:text-zinc-200">{planned.length}</strong>
                 </span>
               </div>
             </div>
@@ -222,8 +371,10 @@ export default function ProtectionDialog({
                 </select>
               </div>
               <div className="space-y-1">
+                {/* The date means the day it was done or the day it is due,
+                    which is what the state decides — so the label follows it. */}
                 <Label className="text-xs text-zinc-600 dark:text-zinc-400">
-                  {t.protection.date}
+                  {dateLabel(draft.status)}
                 </Label>
                 <Input
                   type="date"
@@ -231,6 +382,29 @@ export default function ProtectionDialog({
                   value={draft.date}
                   onChange={(event) => set("date", event.target.value)}
                 />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs text-zinc-600 dark:text-zinc-400">
+                {t.protection.status}
+              </Label>
+              <div className="flex gap-2">
+                {PROTECTION_STATUSES.map((status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={() => set("status", status)}
+                    aria-pressed={draft.status === status}
+                    className={`flex-1 text-xs py-1.5 rounded-md border transition-colors cursor-pointer ${
+                      draft.status === status
+                        ? "border-rose-400 bg-rose-50 text-rose-700 dark:border-rose-700 dark:bg-rose-950/50 dark:text-rose-300 font-medium"
+                        : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700"
+                    }`}
+                  >
+                    {statusLabel(status)}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -299,62 +473,22 @@ export default function ProtectionDialog({
             )}
           </form>
 
-          {/* History for the chosen field. */}
-          <div className="space-y-2">
-            <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-              {t.protection.historyTitle}
-            </h4>
-            <div className="space-y-1.5 max-h-64 overflow-y-auto">
-              {history.length === 0 ? (
-                <div className="p-4 text-center text-xs text-zinc-400 bg-zinc-50/50 dark:bg-zinc-900/50 rounded-lg border border-dashed border-zinc-200 dark:border-zinc-800">
-                  {t.protection.empty}
-                </div>
-              ) : (
-                history.map((log) => (
-                  <div
-                    key={log.id}
-                    className="group flex items-start justify-between gap-2 p-2.5 rounded-lg border bg-zinc-50/50 dark:bg-zinc-900/50 text-xs"
-                  >
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span
-                          className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${methodBadgeClass(log.method)}`}
-                        >
-                          {methodLabel(log.method)}
-                        </span>
-                        <span className="font-semibold text-zinc-800 dark:text-zinc-200">
-                          {log.agent}
-                        </span>
-                        {log.target && <span className="text-zinc-400">→ {log.target}</span>}
-                      </div>
-                      {log.notes && (
-                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{log.notes}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      {log.dose && (
-                        <span className="font-medium text-rose-600 dark:text-rose-400">
-                          {log.dose}
-                        </span>
-                      )}
-                      <span className="text-zinc-400">{log.date || "—"}</span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setProtectionLogs((prev) => prev.filter((item) => item.id !== log.id))
-                        }
-                        title={t.protection.delete}
-                        aria-label={t.protection.delete}
-                        className="p-1 rounded-md text-zinc-300 dark:text-zinc-600 hover:text-rose-500 dark:hover:text-rose-400 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+          {/* The two states, each as its own list. A plan and a record of what
+              was done are read for different things, and one mixed list ordered
+              either way buries half of itself. */}
+          <TreatmentList
+            title={t.protection.plannedTitle}
+            logs={planned}
+            empty={t.protection.emptyPlanned}
+            onMarkApplied={markApplied}
+            onDelete={removeLog}
+          />
+          <TreatmentList
+            title={t.protection.appliedTitle}
+            logs={applied}
+            empty={t.protection.emptyApplied}
+            onDelete={removeLog}
+          />
         </div>
       </DialogContent>
     </Dialog>
