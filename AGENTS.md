@@ -102,6 +102,22 @@ deliberately isomorphic: no `node:fs`, no Leaflet, so the route, the store and
 the browser all validate against one definition. Anything reaching the store
 goes through `sanitizeData`.
 
+`readDocument` hands back a **shared, read-only document**. Parsing and
+sanitising a farm on every request was most of the work in answering one, so the
+result is cached against the file's own mtime and size; a write here drops the
+entry, and an operator editing the JSON by hand is caught by the stat. Sort or
+filter a copy — `[...document.irrigationLogs].sort(...)` — because the array you
+were handed is the one the next request gets too. `saveData` is safe by
+construction: it builds a new document rather than editing the one it read.
+
+The same split exists in `auth-store`: `readSnapshot` is the cached reader
+behind `accountForToken`, `listAccounts` and `authenticate`, while everything
+that writes keeps using `readDocument` and goes to disk, because it edits the
+document it was handed. `ensureReady` is likewise a promise kept for the life of
+the process — seeding and the legacy-team import cannot come true again, and
+running them per request meant two extra reads and a turn through the write
+queue before every session check.
+
 ## Accounts and sessions
 
 The app has a login. `/api/data` answers a request without a session with `401`

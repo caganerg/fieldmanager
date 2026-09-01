@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -48,7 +48,7 @@ function enqueue<T>(task: () => Promise<T>): Promise<T> {
   return result;
 }
 
-export async function readDocument(): Promise<StoredDocument> {
+async function loadDocument(): Promise<StoredDocument> {
   try {
     const raw = await readFile(dataFile(), "utf8");
     return sanitizeDocument(JSON.parse(raw));
@@ -65,6 +65,42 @@ export async function readDocument(): Promise<StoredDocument> {
   }
 }
 
+/**
+ * The last parsed document, keyed by what the file looked like when it was
+ * read. Parsing and sanitising a farm's worth of polygons on every request was
+ * the bulk of the work in answering one.
+ *
+ * The key is the file's own mtime and size rather than a flag this module sets,
+ * so an operator editing the JSON by hand is picked up on the next request. A
+ * write here drops the entry as well, which covers the ordinary case without
+ * waiting for a stat to disagree.
+ */
+let cache: { mtimeMs: number; size: number; document: StoredDocument } | null = null;
+
+/**
+ * The stored document. The result is shared between callers and **must not be
+ * mutated** — sort or filter a copy. `saveData` builds a fresh document rather
+ * than editing this one.
+ */
+export async function readDocument(): Promise<StoredDocument> {
+  let stats: Awaited<ReturnType<typeof stat>>;
+  try {
+    stats = await stat(dataFile());
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code === "ENOENT") return emptyDocument();
+    throw error;
+  }
+
+  const cached = cache;
+  if (cached && cached.mtimeMs === stats.mtimeMs && cached.size === stats.size) {
+    return cached.document;
+  }
+
+  const document = await loadDocument();
+  cache = { mtimeMs: stats.mtimeMs, size: stats.size, document };
+  return document;
+}
+
 async function writeDocument(document: StoredDocument): Promise<void> {
   const directory = dataDir();
   await mkdir(directory, { recursive: true });
@@ -74,6 +110,9 @@ async function writeDocument(document: StoredDocument): Promise<void> {
   const temporary = path.join(directory, `.${FILE_NAME}.${process.pid}.tmp`);
   await writeFile(temporary, JSON.stringify(document, null, 2), { mode: 0o600 });
   await rename(temporary, target);
+  // The file this process just wrote is the file on disk; whatever was cached
+  // describes the one before it.
+  cache = null;
 }
 
 export interface SaveResult {

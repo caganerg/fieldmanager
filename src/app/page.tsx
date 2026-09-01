@@ -29,8 +29,14 @@ import { createId } from "@/lib/utils";
 import { getPolygonArea } from "@/lib/geo";
 import { t } from "@/lib/translations";
 
-// Dynamically import Map with SSR disabled since Leaflet requires window/document
-const Map = dynamic(() => import("@/components/Map"), {
+// Stands in for a group nobody has put a field in yet. A shared constant rather
+// than a fresh `[]` per lookup, which would be a new identity every render.
+const NO_FIELDS: FieldPolygon[] = [];
+
+// Dynamically import the map with SSR disabled since Leaflet requires
+// window/document. Bound as `FieldMap` rather than `Map` so the built-in of that
+// name stays reachable — the field index below is one.
+const FieldMap = dynamic(() => import("@/components/Map"), {
   ssr: false,
   loading: () => <div className="w-full h-full flex flex-col items-center justify-center text-zinc-500 bg-zinc-100 dark:bg-zinc-900 absolute inset-0">Loading map...</div>
 });
@@ -189,7 +195,7 @@ function Dashboard() {
       // Create new field
       const fieldName = formData.name || `${t.fieldDefaultName} ${fields.length + 1}`;
       const newField: FieldPolygon = {
-        id: Math.random().toString(36).substr(2, 9),
+        id: createId(),
         name: fieldName,
         coordinates: pendingCoordinates,
         cropType: formData.cropType,
@@ -254,7 +260,7 @@ function Dashboard() {
     if (newGroupName.trim()) {
       const groupName = newGroupName.trim();
       setGroups([...groups, {
-        id: Math.random().toString(36).substr(2, 9),
+        id: createId(),
         name: groupName
       }]);
       setNewGroupName("");
@@ -385,6 +391,23 @@ function Dashboard() {
     setDragOverGroup(null);
   }, [dragItem, fields, setFields]);
 
+  // The sidebar draws a row per group and the panel asks for one group's fields
+  // again, so the fields are bucketed once here rather than scanned once per
+  // group — the tree was O(groups x fields) on every render otherwise. A field
+  // pointing at a group that no longer exists stays out of both lists, which is
+  // what the two filters this replaces did as well.
+  const fieldsByGroup = new Map<string, FieldPolygon[]>();
+  const ungroupedFields: FieldPolygon[] = [];
+  for (const field of fields) {
+    if (!field.groupId) {
+      ungroupedFields.push(field);
+      continue;
+    }
+    const bucket = fieldsByGroup.get(field.groupId);
+    if (bucket) bucket.push(field);
+    else fieldsByGroup.set(field.groupId, [field]);
+  }
+
   // Check if right panel should be open
   const isRightPanelOpen = pendingCoordinates !== null || selectedFieldId !== null || selectedGroupId !== null;
 
@@ -476,7 +499,7 @@ function Dashboard() {
                 {/* --- Groups as tree nodes --- */}
                 {groups.map(group => {
                   const isExpanded = expandedGroups.has(group.id);
-                  const groupFields = fields.filter(f => f.groupId === group.id);
+                  const groupFields = fieldsByGroup.get(group.id) ?? NO_FIELDS;
                   return (
                     <li
                       key={group.id}
@@ -599,7 +622,7 @@ function Dashboard() {
                 })}
 
                 {/* --- Ungrouped fields at root level --- */}
-                {fields.filter(f => !f.groupId).map(field => (
+                {ungroupedFields.map(field => (
                   <li
                     key={field.id}
                     className={`group/field relative transition-all duration-150 ${dragOverItem?.type === 'field' && dragOverItem.id === field.id
@@ -777,8 +800,8 @@ function Dashboard() {
         {/* Map Container */}
         <div className="flex-1 w-full h-full relative z-0 bg-zinc-200 dark:bg-zinc-800">
           {isMounted && (
-            <Map
-              fields={selectedGroupId === null ? fields : fields.filter(f => f.groupId === selectedGroupId)}
+            <FieldMap
+              fields={selectedGroupId === null ? fields : fieldsByGroup.get(selectedGroupId) ?? NO_FIELDS}
               isDrawingMode={isDrawingMode}
               onPolygonCreated={handlePolygonCreated}
               selectedFieldId={selectedFieldId}
@@ -813,7 +836,7 @@ function Dashboard() {
           <div className="p-6 flex-1 overflow-y-auto space-y-6">
             {selectedGroupId !== null && !selectedFieldId && !pendingCoordinates ? (() => {
               const group = groups.find(g => g.id === selectedGroupId);
-              const groupFields = fields.filter(f => f.groupId === selectedGroupId);
+              const groupFields = fieldsByGroup.get(selectedGroupId) ?? NO_FIELDS;
               const uniqueCrops = Array.from(new Set(groupFields.map(f => f.cropType).filter(Boolean)));
 
               return (

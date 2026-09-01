@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import {
   Sparkles,
   Droplets,
@@ -22,12 +23,16 @@ import { t } from "@/lib/translations";
 import { type FieldPolygon } from "@/components/Map";
 import { DEFAULT_CENTER } from "@/lib/map-constants";
 import { getPolygonCenter } from "@/lib/geo";
-import WeatherDashboard from "@/components/WeatherDashboard";
 import { useAssistant } from "@/components/AssistantProvider";
-import IrrigationDialog from "@/components/IrrigationDialog";
-import ProtectionDialog from "@/components/ProtectionDialog";
-import FertilizerDialog from "@/components/FertilizerDialog";
-import SoilAnalysisDialog from "@/components/SoilAnalysisDialog";
+
+// The weather panel and the four module dialogs are the bulk of what this
+// header pulls in, and none of them is on screen when the page loads. Split out,
+// each arrives the first time somebody opens it.
+const WeatherDashboard = dynamic(() => import("@/components/WeatherDashboard"));
+const IrrigationDialog = dynamic(() => import("@/components/IrrigationDialog"));
+const ProtectionDialog = dynamic(() => import("@/components/ProtectionDialog"));
+const FertilizerDialog = dynamic(() => import("@/components/FertilizerDialog"));
+const SoilAnalysisDialog = dynamic(() => import("@/components/SoilAnalysisDialog"));
 import {
   Dialog,
   DialogContent,
@@ -166,6 +171,12 @@ export default function ToolsBar({
   // at once and overlap each other; one slot makes them mutually exclusive.
   const [openPanel, setOpenPanel] = useState<"tools" | "weather" | null>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
+  // Which module dialogs have been opened at least once. `next/dynamic` fetches
+  // a component the moment it is first rendered, so mounting all four at
+  // `open={false}` — as this did before they were split out — would pull them in
+  // on page load and the split would buy nothing. Once opened, a dialog stays
+  // mounted, so closing it still animates and its form is where it was left.
+  const [openedModals, setOpenedModals] = useState<string[]>([]);
   const { openAssistant } = useAssistant();
   const isOpen = openPanel === "tools";
   const isWeatherOpen = openPanel === "weather";
@@ -246,6 +257,7 @@ export default function ToolsBar({
       openAssistant({ topic: "general", fieldId: field?.id ?? "", fieldName: field?.name ?? "" });
       return;
     }
+    setOpenedModals((prev) => (prev.includes(id) ? prev : [...prev, id]));
     setActiveModal(id);
   };
 
@@ -572,37 +584,45 @@ export default function ToolsBar({
       {/* Feature Modals for Upcoming / Extensible Modules */}
       
       {/* 1. Irrigation */}
-      <IrrigationDialog
-        open={activeModal === "irrigation"}
-        onOpenChange={(open) => !open && setActiveModal(null)}
-        fields={fields}
-        selectedFieldId={selectedFieldId}
-      />
+      {openedModals.includes("irrigation") && (
+        <IrrigationDialog
+          open={activeModal === "irrigation"}
+          onOpenChange={(open) => !open && setActiveModal(null)}
+          fields={fields}
+          selectedFieldId={selectedFieldId}
+        />
+      )}
 
       {/* 2. Fertilization */}
-      <FertilizerDialog
-        open={activeModal === "fertilizer"}
-        onOpenChange={(open) => !open && setActiveModal(null)}
-        fields={fields}
-        selectedFieldId={selectedFieldId}
-      />
+      {openedModals.includes("fertilizer") && (
+        <FertilizerDialog
+          open={activeModal === "fertilizer"}
+          onOpenChange={(open) => !open && setActiveModal(null)}
+          fields={fields}
+          selectedFieldId={selectedFieldId}
+        />
+      )}
 
       {/* 3. Crop Protection. The tool id stays "pesticide": it is what stored
           pinned layouts hold, and an unknown id is dropped from them. */}
-      <ProtectionDialog
-        open={activeModal === "pesticide"}
-        onOpenChange={(open) => !open && setActiveModal(null)}
-        fields={fields}
-        selectedFieldId={selectedFieldId}
-      />
+      {openedModals.includes("pesticide") && (
+        <ProtectionDialog
+          open={activeModal === "pesticide"}
+          onOpenChange={(open) => !open && setActiveModal(null)}
+          fields={fields}
+          selectedFieldId={selectedFieldId}
+        />
+      )}
 
       {/* 4. Soil Analysis */}
-      <SoilAnalysisDialog
-        open={activeModal === "soil"}
-        onOpenChange={(open) => !open && setActiveModal(null)}
-        fields={fields}
-        selectedFieldId={selectedFieldId}
-      />
+      {openedModals.includes("soil") && (
+        <SoilAnalysisDialog
+          open={activeModal === "soil"}
+          onOpenChange={(open) => !open && setActiveModal(null)}
+          fields={fields}
+          selectedFieldId={selectedFieldId}
+        />
+      )}
 
       {/* 4. General Extensible Modal for the modules that have no screen yet */}
       <Dialog

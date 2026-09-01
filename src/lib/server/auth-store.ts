@@ -5,7 +5,7 @@ import {
   scrypt as scryptCallback,
   timingSafeEqual,
 } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
@@ -189,6 +189,37 @@ async function readDocument(): Promise<AuthDocument> {
   }
 }
 
+/**
+ * The last parsed account file, keyed by what the file looked like when it was
+ * read. `accountForToken` fronts every other route in the app, so without this
+ * each request paid a `JSON.parse` and a `sanitizeDocument` that walks every
+ * stored session.
+ *
+ * Only for callers that will not change what they are handed. Everything that
+ * writes edits the document it read, so those keep using `readDocument` and go
+ * to disk; the cost is paid on the rare path rather than the common one.
+ */
+let snapshot: { mtimeMs: number; size: number; document: AuthDocument } | null = null;
+
+async function readSnapshot(): Promise<AuthDocument> {
+  let stats: Awaited<ReturnType<typeof stat>>;
+  try {
+    stats = await stat(authFile());
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code === "ENOENT") return emptyDocument();
+    throw error;
+  }
+
+  const cached = snapshot;
+  if (cached && cached.mtimeMs === stats.mtimeMs && cached.size === stats.size) {
+    return cached.document;
+  }
+
+  const document = await readDocument();
+  snapshot = { mtimeMs: stats.mtimeMs, size: stats.size, document };
+  return document;
+}
+
 async function writeDocument(document: AuthDocument): Promise<void> {
   const directory = dataDir();
   await mkdir(directory, { recursive: true });
@@ -196,6 +227,8 @@ async function writeDocument(document: AuthDocument): Promise<void> {
   const temporary = path.join(directory, `.${FILE_NAME}.${process.pid}.tmp`);
   await writeFile(temporary, JSON.stringify(document, null, 2), { mode: 0o600 });
   await rename(temporary, target);
+  // What was cached describes the file this write just replaced.
+  snapshot = null;
 }
 
 async function hashPassword(password: string): Promise<string> {
@@ -347,15 +380,31 @@ async function importLegacyTeam(): Promise<void> {
   });
 }
 
-/** Everything the store must have done before it can answer a request. */
-export async function ensureReady(): Promise<void> {
-  await ensureSeeded();
-  await importLegacyTeam();
+/**
+ * Everything the store must have done before it can answer a request.
+ *
+ * Both steps below decide they have nothing to do by reading the file, and both
+ * take the write queue to do it — so calling this per request made every read
+ * parse the account file twice more and queue behind whatever `scrypt` hash was
+ * in flight. Neither can become true again once it is done, so the first run is
+ * kept and shared. A failure is not kept: the next caller retries it.
+ */
+let readyPromise: Promise<void> | null = null;
+
+export function ensureReady(): Promise<void> {
+  readyPromise ??= (async () => {
+    await ensureSeeded();
+    await importLegacyTeam();
+  })().catch((error) => {
+    readyPromise = null;
+    throw error;
+  });
+  return readyPromise;
 }
 
 export async function listAccounts(full = false): Promise<PublicAccount[]> {
   await ensureReady();
-  const document = await readDocument();
+  const document = await readSnapshot();
   return document.accounts
     .map((account) => toPublicAccount(account, full))
     .sort((a, b) => (a.name || a.username).localeCompare(b.name || b.username));
@@ -538,7 +587,7 @@ export async function authenticate(
   password: string
 ): Promise<PublicAccount | null> {
   await ensureReady();
-  const document = await readDocument();
+  const document = await readSnapshot();
   const wanted = normalizeUsername(username);
   const account = wanted
     ? document.accounts.find((entry) => entry.username === wanted && entry.passwordHash !== "")
@@ -579,7 +628,7 @@ export function createSession(accountId: string): Promise<IssuedSession> {
 /** The account a cookie belongs to, or null if it is unknown or expired. */
 export async function accountForToken(token: string): Promise<PublicAccount | null> {
   if (!token) return null;
-  const document = await readDocument();
+  const document = await readSnapshot();
   const tokenHash = hashToken(token);
   const session = document.sessions.find((entry) => entry.tokenHash === tokenHash);
   if (!session || Date.parse(session.expiresAt) <= Date.now()) return null;

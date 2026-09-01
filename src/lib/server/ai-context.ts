@@ -222,10 +222,12 @@ export async function buildSystemPrompt(
 
     // Water moves nutrients and leaches them, so the recent watering is context
     // for a dosage question even though nobody asked about irrigation.
+    // Copied before sorting: with no field selected this is the stored array
+    // itself, and `readDocument` hands the same document to the next request.
     const irrigation = (
       field
         ? document.irrigationLogs.filter((log) => log.fieldId === field.id)
-        : document.irrigationLogs
+        : [...document.irrigationLogs]
     )
       .sort(byNewestIrrigation)
       .slice(0, MAX_IRRIGATION_LOGS)

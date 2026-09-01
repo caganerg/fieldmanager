@@ -453,19 +453,23 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
       return;
     }
 
-    const payload: FieldData = {
-      ...emptyData(),
-      fields: fields.map(toStoredField),
-      groups,
-      soilAnalyses,
-      irrigationLogs,
-      fertilizerLogs,
-      protectionLogs,
-      activities,
-    };
-
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
+      // Built here rather than above, where the effect would rebuild it on
+      // every keystroke only for the debounce to throw all but the last one
+      // away. `toStoredField` copies each field's coordinate list, which a
+      // parcel is allowed five thousand points of.
+      const payload: FieldData = {
+        ...emptyData(),
+        fields: fields.map(toStoredField),
+        groups,
+        soilAnalyses,
+        irrigationLogs,
+        fertilizerLogs,
+        protectionLogs,
+        activities,
+      };
+
       setStatus("saving");
       try {
         const response = await fetch(ENDPOINT, {

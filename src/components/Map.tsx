@@ -6,6 +6,8 @@ import { EditControl } from "react-leaflet-draw";
 import type { LatLng, LatLngTuple } from "leaflet";
 import L from "leaflet";
 
+import "@/components/map.css";
+
 // Fix default Leaflet icon paths in Next.js
 const defaultIcon = L.icon({
   iconUrl: "/leaflet/marker-icon.png",
