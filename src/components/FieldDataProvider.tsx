@@ -44,6 +44,11 @@ import { defaultActivity, type ActivityItem } from "@/lib/team";
 const ENDPOINT = "/api/data";
 const SAVE_DEBOUNCE_MS = 800;
 
+// How many document states the undo stack keeps in each direction. A snapshot
+// shares the slice arrays that did not change, so a step costs the one list
+// that did rather than a copy of the whole farm.
+const HISTORY_LIMIT = 50;
+
 // Records these modules kept in localStorage before the server store existed.
 // They are adopted once and then removed; see `migrateLocalRecords`.
 const LEGACY_KEYS = {
@@ -55,6 +60,24 @@ const LEGACY_KEYS = {
 
 export type SyncStatus = "loading" | "idle" | "saving" | "error";
 
+/**
+ * One whole document state, as the browser holds it.
+ *
+ * Undo works on the document rather than on a single list because one action
+ * usually touches several: deleting a field also writes the activity that says
+ * it was deleted. Stepping back over the field but not the log would leave the
+ * log claiming something that is on screen again.
+ */
+interface Snapshot {
+  fields: FieldPolygon[];
+  groups: { id: string; name: string }[];
+  soilAnalyses: SoilAnalysis[];
+  irrigationLogs: IrrigationLog[];
+  fertilizerLogs: FertilizerLog[];
+  protectionLogs: ProtectionLog[];
+  activities: ActivityItem[];
+}
+
 interface FieldDataContextValue {
   ready: boolean;
   status: SyncStatus;
@@ -65,6 +88,13 @@ interface FieldDataContextValue {
   canEdit: boolean;
   dismissReloadNotice: () => void;
   retry: () => void;
+
+  /** True when there is an earlier document state to step back to. */
+  canUndo: boolean;
+  /** True when a step that was undone can be put back. */
+  canRedo: boolean;
+  undo: () => void;
+  redo: () => void;
 
   fields: FieldPolygon[];
   setFields: Dispatch<SetStateAction<FieldPolygon[]>>;
@@ -202,6 +232,19 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
   const [reloadedFromServer, setReloadedFromServer] = useState(false);
   const [loadToken, setLoadToken] = useState(0);
 
+  // Undo/redo over the whole document. The two stacks are state because the
+  // buttons in the header are drawn from whether they are empty; what is
+  // currently on screen is a ref, updated by the recording effect below, so
+  // taking a snapshot does not cause a render of its own.
+  const [history, setHistory] = useState<{ past: Snapshot[]; future: Snapshot[] }>({
+    past: [],
+    future: [],
+  });
+  const presentRef = useRef<Snapshot | null>(null);
+  // Set for the one commit that undo, redo or a retry nudge is about to cause,
+  // so that commit is not recorded as a step of its own.
+  const skipNextHistoryRef = useRef(false);
+
   const revisionRef = useRef(0);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Guards the save effect: it must not fire for the state that loading itself
@@ -220,6 +263,14 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
 
   const applyDocument = useCallback((document: StoredDocument) => {
     revisionRef.current = document.revision;
+    // What the server just handed over is the new starting point; the steps
+    // before it describe a document this browser no longer holds. On the 409
+    // path especially, undoing across the adoption would push the version this
+    // tab never saw back out, which is the overwrite adopting it avoided.
+    // Clearing `presentRef` is also what stops the commit below from being
+    // recorded — the effect has nothing to record a step against.
+    setHistory({ past: [], future: [] });
+    presentRef.current = null;
     setFields(document.fields.map(toFieldPolygon));
     setGroups(document.groups);
     setSoilAnalyses(document.soilAnalyses);
@@ -289,6 +340,109 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
       cancelled = true;
     };
   }, [applyDocument, loadToken, refreshSession]);
+
+  // Records a step for every commit that changed the document. React batches
+  // the state updates one action makes, so an action lands here once however
+  // many lists it touched — deleting a field and logging the deletion is a
+  // single step, which is what makes one undo put both back.
+  useEffect(() => {
+    if (!ready) return;
+    const snapshot: Snapshot = {
+      fields,
+      groups,
+      soilAnalyses,
+      irrigationLogs,
+      fertilizerLogs,
+      protectionLogs,
+      activities,
+    };
+    const previous = presentRef.current;
+    presentRef.current = snapshot;
+    if (skipNextHistoryRef.current) {
+      skipNextHistoryRef.current = false;
+      return;
+    }
+    // No earlier state: this is the one the load itself installed.
+    if (!previous) return;
+    setHistory((current) => ({
+      past: [...current.past, previous].slice(-HISTORY_LIMIT),
+      // A new edit is a new branch; whatever had been undone is gone.
+      future: [],
+    }));
+  }, [
+    ready,
+    fields,
+    groups,
+    soilAnalyses,
+    irrigationLogs,
+    fertilizerLogs,
+    protectionLogs,
+    activities,
+  ]);
+
+  const applySnapshot = useCallback((snapshot: Snapshot) => {
+    setFields(snapshot.fields);
+    setGroups(snapshot.groups);
+    setSoilAnalyses(snapshot.soilAnalyses);
+    setIrrigationLogs(snapshot.irrigationLogs);
+    setFertilizerLogs(snapshot.fertilizerLogs);
+    setProtectionLogs(snapshot.protectionLogs);
+    setActivities(snapshot.activities);
+  }, []);
+
+  // Stepping either way is one state change to the whole document, which the
+  // save effect then writes back like any other edit. A read-only account has
+  // nothing to step: its edits would never reach the server anyway.
+  const undo = useCallback(() => {
+    if (!canEdit) return;
+    const previous = history.past[history.past.length - 1];
+    const current = presentRef.current;
+    if (!previous || !current) return;
+    skipNextHistoryRef.current = true;
+    setHistory({
+      past: history.past.slice(0, -1),
+      future: [current, ...history.future].slice(0, HISTORY_LIMIT),
+    });
+    applySnapshot(previous);
+  }, [canEdit, history, applySnapshot]);
+
+  const redo = useCallback(() => {
+    if (!canEdit) return;
+    const next = history.future[0];
+    const current = presentRef.current;
+    if (!next || !current) return;
+    skipNextHistoryRef.current = true;
+    setHistory({
+      past: [...history.past, current].slice(-HISTORY_LIMIT),
+      future: history.future.slice(1),
+    });
+    applySnapshot(next);
+  }, [canEdit, history, applySnapshot]);
+
+  // The shortcut lives here rather than on the buttons so it works wherever the
+  // user is on the page, including with a module dialog open. A text box keeps
+  // its own undo: taking Ctrl+Z away from a half-typed field name would cost
+  // more than the shortcut gives.
+  useEffect(() => {
+    if (!canEdit) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      const key = event.key.toLowerCase();
+      if (key !== "z" && key !== "y") return;
+
+      const target = event.target as HTMLElement | null;
+      if (target?.isContentEditable) return;
+      if (target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
+
+      event.preventDefault();
+      if (key === "y" || event.shiftKey) redo();
+      else undo();
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [canEdit, undo, redo]);
 
   // Debounced write-back. Every edit anywhere in the document lands here.
   useEffect(() => {
@@ -385,6 +539,9 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
   const retry = useCallback(() => {
     if (ready) {
       // A failed save still has the edits in state; nudging the effect retries.
+      // The nudge is a new array over the same fields, so it must not be
+      // recorded as a change somebody could undo.
+      skipNextHistoryRef.current = true;
       setStatus("idle");
       setFields((prev) => [...prev]);
     } else {
@@ -404,6 +561,10 @@ export default function FieldDataProvider({ children }: { children: ReactNode })
         canEdit,
         dismissReloadNotice,
         retry,
+        canUndo: history.past.length > 0,
+        canRedo: history.future.length > 0,
+        undo,
+        redo,
         fields,
         setFields,
         groups,

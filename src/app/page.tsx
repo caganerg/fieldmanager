@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { type FieldPolygon } from "@/components/Map";
 import type { LatLngTuple } from "leaflet";
+import HistoryControls from "@/components/HistoryControls";
 import ToolsBar from "@/components/ToolsBar";
 import UsersMenu, { type ActivityItem } from "@/components/UsersMenu";
 import FieldDataProvider, { useFieldData } from "@/components/FieldDataProvider";
@@ -714,6 +715,9 @@ function Dashboard() {
           </h2>
           
           <div className="pointer-events-auto flex items-center gap-3 relative">
+            {/* Undo / redo of the whole workspace, Ctrl+Z included */}
+            <HistoryControls />
+
             {/* Pinned tools + the Tools folder they can be dragged in and out of */}
             <ToolsBar
               fields={fields}

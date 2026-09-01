@@ -72,6 +72,19 @@ data to `localStorage` — browser storage is only for things that describe the
 browser (theme, pinned tools, the welcome flag, which member the session acts
 as).
 
+The provider also keeps the undo stack, and it is a stack of whole documents
+rather than one per list: deleting a field also writes the activity saying so,
+and a step that put the field back but left the log entry would be describing
+something that is on screen again. Because React batches the state updates one
+action makes, an action is recorded once however many slices it touched.
+Undoing is an ordinary edit as far as the save effect is concerned, so it
+reaches the server the same way. Adopting a document from the server — the
+first load and the 409 path — clears the stack; undoing across the adoption
+would push the version this tab never saw back out, which is the overwrite
+adopting it avoided. `HistoryControls` in the header and Ctrl+Z are two ways
+into the same stack, and the shortcut deliberately stands aside inside a text
+box, which has an undo of its own.
+
 `src/lib/team.ts` holds the roles and the `ActivityItem` type. The people
 themselves are **not** in this document — see below.
 

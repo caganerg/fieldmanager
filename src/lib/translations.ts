@@ -28,6 +28,14 @@ export const t = {
   syncRetry: "Retry",
   syncReloaded: "Another session changed the data; this view has been refreshed.",
   syncDismiss: "Dismiss",
+
+  // Stepping the document back and forth, from the header
+  undoBtn: "Undo",
+  redoBtn: "Redo",
+  undoTitle: "Undo the last change (Ctrl+Z)",
+  redoTitle: "Redo the change (Ctrl+Shift+Z)",
+  undoNothing: "Nothing to undo",
+  redoNothing: "Nothing to redo",
   syncLoadFailed: "Saved data could not be loaded. Changes made now may not be stored.",
 
   aboutBtn: "About",
