@@ -42,7 +42,7 @@ export default function AboutDialog({
             </p>
           </div>
           <div className="pt-4 border-t text-xs text-zinc-400 text-center">
-            {t.versionLabel} 0.2.1 &bull; &copy; 2026 {t.contributorsLabel}
+            {t.versionLabel} 0.3.0 &bull; &copy; 2026 {t.contributorsLabel}
           </div>
         </div>
       </DialogContent>
