@@ -74,12 +74,6 @@ export interface AssistantReply {
   model: string;
 }
 
-export interface AssistantFailure {
-  error: string;
-  /** Set when the server has no provider configured, so the UI can say so. */
-  unconfigured?: boolean;
-}
-
 export function isAssistantTopic(value: unknown): value is AssistantTopic {
   return typeof value === "string" && (ASSISTANT_TOPICS as readonly string[]).includes(value);
 }

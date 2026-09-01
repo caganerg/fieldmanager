@@ -110,14 +110,11 @@ export const t = {
   weatherUnavailable: "No reading available",
   weatherRetry: "Try again",
   weatherRefresh: "Refresh",
-  weatherUpdated: "Updated",
   
   fieldDefaultName: "Field",
-  groupDefaultName: "Group",
   
   featuresBtn: "Tools",
   featuresTitle: "Agricultural Tools & Modules",
-  featuresDesc: "Smart management, planning, and tracking tools for your fields.",
   comingSoon: "Coming Soon",
   activeStatus: "Active",
   inDevelopment: "In Development",
@@ -374,19 +371,10 @@ export const t = {
   },
 
   // Users & Team Management
-  usersBtn: "Users",
   usersTitle: "User & Team Management",
-  usersDesc: "The people on this farm: profile, role, field access and sign-in, in one list.",
-  addUserBtn: "Add / Invite User",
   editUserBtn: "Edit User",
   activeUser: "Active Session",
-  usersTabTeam: "Team Members",
   usersTabRoles: "Roles & Permissions",
-  usersTabActivity: "Activity Log",
-  userRoleAdmin: "System Administrator",
-  userRoleAgronomist: "Agronomist",
-  userRoleOperator: "Field Operator",
-  userRoleViewer: "Field Observer",
   allFieldsAccess: "All Fields Access",
   teamNotice: "Everyone who works these fields, and who among them can sign in.",
 
@@ -413,8 +401,6 @@ export const t = {
   accountsDesc: "One record per person: profile, role, assigned fields, and the sign-in they use — if they have one.",
   accountsAdminOnly: "Only an administrator can add people or change roles and sign-in details.",
   addAccountBtn: "Add person",
-  nameLabel: "Full name",
-  emailLabel: "Email",
   newPasswordLabel: "New password",
   currentPasswordLabel: "Current password",
   confirmPasswordLabel: "Confirm new password",
@@ -430,5 +416,3 @@ export const t = {
   changePasswordPrompt: "This account is still on the password it was created with. Anybody who knows it can sign in as you.",
   changeLaterBtn: "Not now",
 } as const;
-
-export default t;

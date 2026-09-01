@@ -38,7 +38,7 @@ const NO_FIELDS: FieldPolygon[] = [];
 // name stays reachable — the field index below is one.
 const FieldMap = dynamic(() => import("@/components/Map"), {
   ssr: false,
-  loading: () => <div className="w-full h-full flex flex-col items-center justify-center text-zinc-500 bg-zinc-100 dark:bg-zinc-900 absolute inset-0">Loading map...</div>
+  loading: () => <div className="w-full h-full flex flex-col items-center justify-center text-zinc-500 bg-zinc-100 dark:bg-zinc-900 absolute inset-0">{t.loadingMap}</div>
 });
 
 function Dashboard() {

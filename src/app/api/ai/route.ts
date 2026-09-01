@@ -10,6 +10,12 @@ import {
 } from "@/lib/ai";
 import { buildSystemPrompt } from "@/lib/server/ai-context";
 import { AiProviderError, askProvider } from "@/lib/server/ai-providers";
+import {
+  clientKey,
+  createRateLimiter,
+  readJsonBody,
+  tooManyRequests,
+} from "@/lib/server/rate-limit";
 import { requireAccount } from "@/lib/server/session";
 
 /**
@@ -35,33 +41,7 @@ export const dynamic = "force-dynamic";
 // time being the only thing standing between a loop in a component and a
 // four-figure invoice.
 const MAX_BODY_BYTES = 128 * 1024;
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX_ASKS = 20;
-const askCounts = new Map<string, { count: number; windowStart: number }>();
-
-function getClientKey(request: NextRequest): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) return forwardedFor.split(",")[0].trim();
-  return request.headers.get("x-real-ip") || "unknown";
-}
-
-function isRateLimited(key: string): boolean {
-  const now = Date.now();
-  const entry = askCounts.get(key);
-
-  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
-    askCounts.set(key, { count: 1, windowStart: now });
-    if (askCounts.size > 5000) {
-      for (const [mapKey, mapEntry] of askCounts) {
-        if (now - mapEntry.windowStart > RATE_LIMIT_WINDOW_MS) askCounts.delete(mapKey);
-      }
-    }
-    return false;
-  }
-
-  entry.count += 1;
-  return entry.count > RATE_LIMIT_MAX_ASKS;
-}
+const limiter = createRateLimiter({ windowMs: 60_000, max: 20 });
 
 interface ProviderConfig {
   provider: AiProvider;
@@ -88,29 +68,14 @@ export async function POST(request: NextRequest) {
   const auth = await requireAccount(request);
   if ("response" in auth) return auth.response;
 
-  if (isRateLimited(getClientKey(request))) {
-    return NextResponse.json(
-      { error: "Too many questions in a row. Please wait a moment." },
-      { status: 429, headers: { "Retry-After": "60" } }
-    );
+  if (limiter.isLimited(clientKey(request))) {
+    return tooManyRequests("Too many questions in a row. Please wait a moment.", 60);
   }
 
-  if (Number(request.headers.get("content-length") || 0) > MAX_BODY_BYTES) {
-    return NextResponse.json({ error: "Payload too large." }, { status: 413 });
-  }
+  const parsed = await readJsonBody(request, MAX_BODY_BYTES);
+  if ("response" in parsed) return parsed.response;
 
-  let body: unknown;
-  try {
-    const raw = await request.text();
-    if (raw.length > MAX_BODY_BYTES) {
-      return NextResponse.json({ error: "Payload too large." }, { status: 413 });
-    }
-    body = JSON.parse(raw);
-  } catch {
-    return NextResponse.json({ error: "Request body is not valid JSON." }, { status: 400 });
-  }
-
-  const payload = (body || {}) as Record<string, unknown>;
+  const payload = (parsed.body || {}) as Record<string, unknown>;
   if (!isAssistantTopic(payload.topic)) {
     return NextResponse.json({ error: "Unknown assistant topic." }, { status: 400 });
   }

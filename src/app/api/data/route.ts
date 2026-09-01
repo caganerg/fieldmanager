@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { dataFileLocation, readDocument, saveData } from "@/lib/server/data-store";
+import {
+  clientKey,
+  createRateLimiter,
+  readJsonBody,
+  tooManyRequests,
+} from "@/lib/server/rate-limit";
 import { requireAccount, requireEditor } from "@/lib/server/session";
 
 // Reads and writes the file on every request, so it must never be prerendered
@@ -17,33 +23,7 @@ export const dynamic = "force-dynamic";
  * from filling the disk.
  */
 const MAX_BODY_BYTES = 8 * 1024 * 1024;
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX_WRITES = 60;
-const writeCounts = new Map<string, { count: number; windowStart: number }>();
-
-function getClientKey(request: NextRequest): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) return forwardedFor.split(",")[0].trim();
-  return request.headers.get("x-real-ip") || "unknown";
-}
-
-function isRateLimited(key: string): boolean {
-  const now = Date.now();
-  const entry = writeCounts.get(key);
-
-  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
-    writeCounts.set(key, { count: 1, windowStart: now });
-    if (writeCounts.size > 5000) {
-      for (const [mapKey, mapEntry] of writeCounts) {
-        if (now - mapEntry.windowStart > RATE_LIMIT_WINDOW_MS) writeCounts.delete(mapKey);
-      }
-    }
-    return false;
-  }
-
-  entry.count += 1;
-  return entry.count > RATE_LIMIT_MAX_WRITES;
-}
+const limiter = createRateLimiter({ windowMs: 60_000, max: 60 });
 
 function failure(error: unknown, fallback: string) {
   const message = error instanceof Error ? error.message : fallback;
@@ -69,30 +49,14 @@ export async function PUT(request: NextRequest) {
   const auth = await requireEditor(request);
   if ("response" in auth) return auth.response;
 
-  if (isRateLimited(getClientKey(request))) {
-    return NextResponse.json(
-      { error: "Too many writes. Please slow down and try again shortly." },
-      { status: 429, headers: { "Retry-After": "60" } }
-    );
+  if (limiter.isLimited(clientKey(request))) {
+    return tooManyRequests("Too many writes. Please slow down and try again shortly.", 60);
   }
 
-  const declaredLength = Number(request.headers.get("content-length") || 0);
-  if (declaredLength > MAX_BODY_BYTES) {
-    return NextResponse.json({ error: "Payload too large." }, { status: 413 });
-  }
+  const parsed = await readJsonBody(request, MAX_BODY_BYTES);
+  if ("response" in parsed) return parsed.response;
 
-  let body: unknown;
-  try {
-    const raw = await request.text();
-    if (raw.length > MAX_BODY_BYTES) {
-      return NextResponse.json({ error: "Payload too large." }, { status: 413 });
-    }
-    body = JSON.parse(raw);
-  } catch {
-    return NextResponse.json({ error: "Request body is not valid JSON." }, { status: 400 });
-  }
-
-  const payload = body as { revision?: unknown; data?: unknown } | null;
+  const payload = parsed.body as { revision?: unknown; data?: unknown } | null;
   const revision = Number(payload?.revision);
   if (!payload || !Number.isFinite(revision) || revision < 0) {
     return NextResponse.json(
