@@ -3,28 +3,24 @@
 import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 
-import { Trees, MapPin, Settings, Trash2, Edit2, ChevronRight, ChevronDown, Save, X, Plus, Folder, FolderOpen, GripVertical, Palette, Info, Sun, Moon, Monitor, Cloud, CloudOff, Loader2, RefreshCw, Eye } from "lucide-react";
+import { Trees, MapPin, Settings, Trash2, Edit2, ChevronRight, ChevronDown, Save, X, Plus, Folder, FolderOpen, GripVertical, Palette, Info, Cloud, CloudOff, Loader2, RefreshCw, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { type FieldPolygon } from "@/components/Map";
 import type { LatLngTuple } from "leaflet";
 import HistoryControls from "@/components/HistoryControls";
 import ToolsBar from "@/components/ToolsBar";
-import UsersMenu, { type ActivityItem } from "@/components/UsersMenu";
+import UsersMenu from "@/components/UsersMenu";
 import FieldDataProvider, { useFieldData } from "@/components/FieldDataProvider";
 import AssistantProvider from "@/components/AssistantProvider";
 import { useAuth } from "@/components/AuthProvider";
 import ChangePasswordDialog from "@/components/ChangePasswordDialog";
 import GuestScreen from "@/components/GuestScreen";
-import { ACTIVITY_LIMIT } from "@/lib/team";
+import AboutDialog from "@/components/AboutDialog";
+import SettingsDialog from "@/components/SettingsDialog";
+import WelcomeDialog from "@/components/WelcomeDialog";
+import { ACTIVITY_LIMIT, type ActivityItem } from "@/lib/team";
 import { createId } from "@/lib/utils";
 import { getPolygonArea } from "@/lib/geo";
 import { t } from "@/lib/translations";
@@ -80,10 +76,6 @@ function Dashboard() {
   const [newGroupName, setNewGroupName] = useState("");
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isWelcomeOpen, setIsWelcomeOpen] = useState(false);
-
-  // Theme State
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
 
   // The nudge that follows signing in with a password somebody else chose.
   // Dismissing it only hides it for this page load; the flag stays set on the
@@ -110,50 +102,10 @@ function Dashboard() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMounted(true);
-    const savedTheme = localStorage.getItem('fieldmanager-theme') as 'light' | 'dark' | 'system' | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
-    }
     // The weather key now lives only in the server environment. Drop any copy
     // left in this browser by an earlier version.
     localStorage.removeItem('fieldmanager-weather-api-key');
-
-    // Check if first visit for welcome modal
-    const hasWelcomed = localStorage.getItem('fieldmanager-welcomed');
-    if (!hasWelcomed) {
-      setIsWelcomeOpen(true);
-    }
   }, []);
-
-  // Apply theme to <html> element
-  useEffect(() => {
-    const applyTheme = () => {
-      const root = document.documentElement;
-      if (theme === 'dark') {
-        root.classList.add('dark');
-      } else if (theme === 'light') {
-        root.classList.remove('dark');
-      } else {
-        // system
-        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-          root.classList.add('dark');
-        } else {
-          root.classList.remove('dark');
-        }
-      }
-    };
-
-    applyTheme();
-    localStorage.setItem('fieldmanager-theme', theme);
-
-    // Listen for system theme changes when in 'system' mode
-    if (theme === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handler = () => applyTheme();
-      mediaQuery.addEventListener('change', handler);
-      return () => mediaQuery.removeEventListener('change', handler);
-    }
-  }, [theme]);
 
   // The activity log names the account that did the thing; there is no longer
   // a separate "acting as" choice to get out of step with the session.
@@ -1051,134 +1003,9 @@ function Dashboard() {
           )}
         </aside>
       )}
-      {/* About Dialog */}
-      <Dialog open={isAboutOpen} onOpenChange={setIsAboutOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Trees className="w-5 h-5 text-emerald-600" />
-              {t.aboutTitle}
-            </DialogTitle>
-            <DialogDescription>
-              {t.aboutDesc}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              {t.aboutBody}
-            </p>
-            <div className="space-y-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-              <h4 className="text-xs font-semibold text-zinc-500 uppercase">{t.licenseLabel}</h4>
-              <p className="text-xs text-zinc-500">
-                {t.licenseDesc}<br />
-                {t.noWarranty}
-              </p>
-            </div>
-            <div className="pt-4 border-t text-xs text-zinc-400 text-center">
-              {t.versionLabel} 0.2.1 &bull; &copy; 2026 {t.contributorsLabel}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-      {/* Settings Dialog */}
-      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Settings className="w-5 h-5 text-emerald-600" />
-              {t.settingsBtn}
-            </DialogTitle>
-            <DialogDescription>
-              {t.settingsBtn}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-6 py-4">
-            {/* Theme Selection */}
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">{t.theme}</Label>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { value: 'light' as const, label: t.themeLight, icon: Sun },
-                  { value: 'dark' as const, label: t.themeDark, icon: Moon },
-                  { value: 'system' as const, label: t.themeSystem, icon: Monitor },
-                ].map(option => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setTheme(option.value)}
-                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer ${theme === option.value
-                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 shadow-sm'
-                      : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800/50'
-                      }`}
-                  >
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${theme === option.value
-                      ? 'bg-emerald-100 dark:bg-emerald-800/40'
-                      : 'bg-zinc-100 dark:bg-zinc-800'
-                      }`}>
-                      <option.icon className={`w-5 h-5 transition-colors ${theme === option.value
-                        ? 'text-emerald-600 dark:text-emerald-400'
-                        : 'text-zinc-500 dark:text-zinc-400'
-                        }`} />
-                    </div>
-                    <span className={`text-sm font-medium transition-colors ${theme === option.value
-                      ? 'text-emerald-700 dark:text-emerald-300'
-                      : 'text-zinc-600 dark:text-zinc-400'
-                      }`}>{option.label}</span>
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-zinc-400 dark:text-zinc-500">
-                {theme === 'system'
-                  ? t.themeDesc
-                  : theme === 'dark'
-                    ? t.themeDarkActive
-                    : t.themeLightActive}
-              </p>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Welcome Dialog */}
-      <Dialog open={isWelcomeOpen} onOpenChange={(open) => {
-        if (!open) {
-          setIsWelcomeOpen(false);
-          localStorage.setItem('fieldmanager-welcomed', 'true');
-        }
-      }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-emerald-600">
-              <Trees className="w-6 h-6" />
-              {t.welcomeTitle}
-            </DialogTitle>
-            <DialogDescription className="text-sm pt-2">
-              {t.welcomeSubtitle}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2 text-sm text-zinc-600 dark:text-zinc-300">
-            <p>
-              <strong>{t.howToUse}</strong>
-              <br/>
-              {t.howToUseDesc}
-            </p>
-            <p>
-              <strong>{t.weatherFeature}</strong>
-              <br/>
-              {t.weatherDesc}
-            </p>
-            <Button 
-              className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white" 
-              onClick={() => {
-                setIsWelcomeOpen(false);
-                localStorage.setItem('fieldmanager-welcomed', 'true');
-              }}
-            >
-              {t.startBtn}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AboutDialog open={isAboutOpen} onOpenChange={setIsAboutOpen} />
+      <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
+      <WelcomeDialog />
 
       {/* Suggested, not forced: the dialog closes, and comes back on the next
           page load until the password is actually replaced. */}

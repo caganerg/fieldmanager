@@ -83,10 +83,11 @@ export default function Map({
 
   const center = DEFAULT_CENTER;
 
-  // Callback when a shape is drawn correctly
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleCreated = (e: any) => {
-    const layer = e.layer;
+  // Callback when a shape is drawn correctly. Only polygons are offered by the
+  // control, but the event covers every shape leaflet-draw can make, so the
+  // narrowing below is what picks out the one this map deals in.
+  const handleCreated = (event: L.DrawEvents.Created) => {
+    const layer = event.layer;
     if (layer instanceof L.Polygon) {
       const latlngs = layer.getLatLngs()[0] as L.LatLng[];
       const coords: LatLngTuple[] = latlngs.map((ll) => [ll.lat, ll.lng]);

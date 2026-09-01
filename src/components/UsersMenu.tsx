@@ -58,8 +58,6 @@ import { useAccounts } from "@/lib/use-accounts";
  * top of this panel.
  */
 
-export type { ActivityItem };
-
 interface UsersMenuProps {
   fields?: FieldPolygon[];
   activities?: ActivityItem[];
