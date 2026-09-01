@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+import { version } from "./package.json";
+
 // The map needs OpenStreetMap tiles and its own inline styles/scripts
 // (Next.js hydration, Tailwind); nothing else is loaded from the network.
 // Dev-only additions: Turbopack/React's dev-mode debugging uses eval(), and
@@ -51,6 +53,12 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // The about dialog shows the version, and package.json is where it is
+  // actually set. Inlining it at build time keeps the number in one place
+  // rather than in two that drift apart across a release.
+  env: {
+    NEXT_PUBLIC_APP_VERSION: version,
+  },
   reactCompiler: true,
   devIndicators: false,
   async headers() {
