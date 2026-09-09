@@ -28,7 +28,8 @@ bun install
 Create `.env.local` with your OpenWeather API key (get a free one at
 [openweathermap.org](https://openweathermap.org/api)). This is the only place
 the key is configured — it is read on the server and never exposed to the
-browser, and the app has no in-app field for it:
+browser, and the app has no in-app field for it. Weather is served by the API
+service described below, which reads the same file:
 
 ```bash
 cp .env.example .env.local
@@ -60,12 +61,17 @@ Next.js reaches it through the `rewrites` in `next.config.ts`, so the browser
 still talks to a single origin and the port you open is Next's, not this one.
 `FIELDMANAGER_API_ORIGIN` points Next somewhere else if you move it.
 
-Right now it serves only `/api/health`; every other route is still handled by
-Next. Start it before the dev server:
+It serves `/api/health` and the weather proxy; every other route is still
+handled by Next. Start it from the project directory — it reads `.env.local`
+from there for the OpenWeather key, the same file Next reads — before the dev
+server:
 
 ```bash
 ./backend/target/release/fieldmanager-api
 ```
+
+Anything already set in the real environment wins over `.env.local`, which is
+what lets a systemd unit hold the key in production.
 
 ### Both together
 
@@ -307,6 +313,9 @@ Restart=on-failure
 RestartSec=5
 Environment=FIELDMANAGER_BIND=127.0.0.1:8080
 Environment=FIELDMANAGER_DATA_DIR=/var/lib/fieldmanager
+# The OpenWeather key lives here now, not in .env.local: weather is served by
+# this service. Keep the file 0600 and owned by root.
+EnvironmentFile=/etc/fieldmanager/api.env
 # Hardening: the service needs its data directory and nothing else.
 NoNewPrivileges=true
 ProtectSystem=strict
@@ -327,11 +336,21 @@ Wants=network-online.target fieldmanager-api.service
 ```
 
 ```bash
+sudo install -d -m 700 /etc/fieldmanager
+sudo tee /etc/fieldmanager/api.env >/dev/null <<'ENV'
+OPENWEATHER_API_KEY=your_openweather_api_key_here
+ENV
+sudo chmod 600 /etc/fieldmanager/api.env
+
 sudo systemctl daemon-reload
 sudo systemctl enable --now fieldmanager-api
 sudo systemctl restart fieldmanager
 curl -s localhost:3000/api/health      # {"status":"ok","version":"..."}
 ```
+
+`ProtectSystem=strict` above makes the whole filesystem read-only for this
+service apart from `ReadWritePaths`, so it can read that file but nothing can
+be written outside the data directory.
 
 ## Development Philosophy
 This project is a product of **Vibe Coding**.

@@ -553,6 +553,55 @@ same coordinates does not reach upstream; the limiter counts distinct client
 addresses rather than one.
 **Blast radius:** the weather card.
 
+#### Status
+
+Done. `src/app/api/weather/route.ts` is deleted, `/api/weather` is in
+`rustApiPaths`, and `rate-limit.ts` now says three routes rather than four.
+`/api/_echo` and `FIELDMANAGER_ECHO` are gone, having answered slice 0's
+questions.
+
+Verified end to end through Next on :3000, with the TypeScript handler removed
+— so a reply at all is proof the rewrite is serving it:
+
+| | |
+| --- | --- |
+| no key set | `503 {"configured":false,...}` |
+| `lat`/`lon` missing | `400 Latitude and longitude are required.` |
+| out of range, or not a number | `400 Invalid coordinate values provided.` |
+| 21st request in a minute | `429` with `Retry-After: 60` |
+| key set, upstream rejects it | `502 {"error":"Invalid API Key."}` — a real TLS call to OpenWeather |
+| `.env.local` | read by the API service, real environment wins |
+
+12 unit tests cover the limiter's window and address rules, the forecast
+grouping, the cache, and the key format check. A 200 body is the one path not
+exercised here: it needs a real OpenWeather key, which this machine has none of.
+
+**One rewrite ordering fact worth keeping.** A `rewrites()` that returns a plain
+array is checked *after* filesystem routes, so a path only reaches Rust once its
+`route.ts` is gone. Adding a path to `rustApiPaths` and leaving the handler in
+place changes nothing, silently. `next.config.ts` says so where the list is.
+
+Four deliberate departures from the TypeScript, none of them widening what is
+accepted:
+
+- **Coordinates are parsed strictly.** `parseFloat("41.5abc")` is 41.5; this
+  refuses it. The only caller sends a plain number.
+- **The cache is keyed on the exact coordinates**, not rounded ones as this
+  document first suggested. Next's fetch cache was keyed on the upstream URL,
+  and two parcels a few metres apart are still two parcels — sharing a reading
+  between them would be a change in behaviour rather than a saving.
+- **A 15-second upstream timeout**, where the TypeScript inherited whatever
+  Next's fetch did.
+- **`.env.local` is read by the service** (`dotenvy`, never overriding the real
+  environment). Next reads that file by itself; without this the operator would
+  set the key exactly where README says and be told weather is not configured.
+
+And one thing the logging had to learn: `tower_http`'s classifier calls every
+5xx a failure, so the documented "no key set" 503 wrote an `ERROR` line every
+time somebody opened the panel. It is off by default now — the routes log what
+is worth acting on, the way the TypeScript service's `console.error` lines do —
+and `RUST_LOG=tower_http=debug` brings request tracing back.
+
 ---
 
 ### Slice 2 — The domain crate

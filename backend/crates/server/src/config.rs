@@ -13,10 +13,6 @@ const DEFAULT_BIND: &str = "127.0.0.1:8080";
 
 pub struct Config {
     pub bind: SocketAddr,
-    /// The temporary `/api/_echo` endpoint used to measure what the Next.js
-    /// rewrite passes through. Off unless asked for, and removed once slice 0
-    /// has its answers.
-    pub echo_enabled: bool,
 }
 
 #[derive(Debug)]
@@ -40,22 +36,39 @@ impl std::error::Error for ConfigError {}
 
 impl Config {
     pub fn from_env() -> Result<Self, ConfigError> {
-        let raw = trimmed("FIELDMANAGER_BIND").unwrap_or_else(|| DEFAULT_BIND.to_string());
+        let raw = env_trimmed("FIELDMANAGER_BIND").unwrap_or_else(|| DEFAULT_BIND.to_string());
         let bind = raw
             .parse()
             .map_err(|source| ConfigError::Bind { value: raw, source })?;
 
-        Ok(Self {
-            bind,
-            echo_enabled: trimmed("FIELDMANAGER_ECHO").as_deref() == Some("1"),
-        })
+        Ok(Self { bind })
+    }
+}
+
+/// Loads `.env.local`, if there is one, without overwriting anything already
+/// set in the real environment.
+///
+/// README tells the operator to put `OPENWEATHER_API_KEY` there, and Next
+/// reads that file by itself; this service would otherwise report that weather
+/// is not configured on a machine where it plainly is. A systemd unit's
+/// `Environment=` and `EnvironmentFile=` still win, which is the order that
+/// matters in production.
+pub fn load_env_file() {
+    match dotenvy::from_filename(".env.local") {
+        Ok(path) => tracing::info!(file = %path.display(), "loaded environment file"),
+        Err(error) if error.not_found() => {}
+        Err(error) => tracing::warn!("could not read .env.local: {error}"),
     }
 }
 
 /// An environment variable that is set to something other than whitespace.
 /// An empty value means "not set", which is how the TypeScript side reads
 /// `OPENWEATHER_API_KEY` and the assistant's three variables too.
-fn trimmed(key: &str) -> Option<String> {
+///
+/// Read per request rather than captured at start-up, so an unconfigured or
+/// malformed key is this endpoint's 503 and never a reason for the whole
+/// service to refuse to come up.
+pub fn env_trimmed(key: &str) -> Option<String> {
     match env::var(key) {
         Ok(value) => {
             let value = value.trim();

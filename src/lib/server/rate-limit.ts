@@ -3,12 +3,16 @@ import { NextResponse, type NextRequest } from "next/server";
 /**
  * The per-client limits the API routes share.
  *
- * Four routes wanted the same counter with different numbers on it — the
- * weather proxy guarding a shared OpenWeather quota, the data route guarding
- * the disk, the assistant guarding the bill, and sign-in guarding a slow
- * password hash — and each carried its own copy of it. One implementation
- * means the window, the sweep and the client-address rule cannot drift apart,
- * and the four sets of numbers are visible where they are declared.
+ * Three routes want the same counter with different numbers on it — the data
+ * route guarding the disk, the assistant guarding the bill, and sign-in
+ * guarding a slow password hash — and each carried its own copy of it. One
+ * implementation means the window, the sweep and the client-address rule
+ * cannot drift apart, and the three sets of numbers are visible where they are
+ * declared.
+ *
+ * The weather proxy was the fourth. It has moved to the Rust API service,
+ * which carries a faithful port of this file; the two must stay in step until
+ * the rest follows.
  *
  * None of this is access control; that is the session check each route makes
  * first. In-memory state is the right fit here because the app is deployed as
