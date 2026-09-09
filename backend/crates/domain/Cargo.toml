@@ -1,0 +1,24 @@
+[package]
+name = "fieldmanager-domain"
+version = "0.0.0"          # the real version comes from package.json; see the server crate
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+base64 = "0.22.1"
+chrono = { version = "0.4.44", default-features = false, features = ["clock", "std"] }
+getrandom = "0.4.3"
+scrypt = { version = "0.12.0", default-features = false }
+serde = { version = "1.0.229", features = ["derive"] }
+# `float_roundtrip` is not optional here. Without it serde_json parses a
+# double approximately, and a coordinate written as 38.795949742794036 comes
+# back one digit short — a different number in the file than the one the
+# browser sent, which is exactly what the round-trip criterion forbids.
+serde_json = { version = "1.0.151", features = ["float_roundtrip", "raw_value"] }
+subtle = "2.6.1"
+
+[dev-dependencies]
+# The fixture runner compares whole JSON documents, so it needs the key order
+# the file was written in rather than the alphabetical one a map would give.
+serde_json = { version = "1.0.151", features = ["float_roundtrip", "preserve_order", "raw_value"] }

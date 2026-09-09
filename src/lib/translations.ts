@@ -319,45 +319,9 @@ export const t = {
     texture: "Texture",
     textureUnknown: "Not specified",
 
-    // Parameter names. Units are rendered separately from these.
-    ph: "pH",
-    phHint: "1:2.5 in water",
-    ec: "Salinity (EC)",
-    lime: "Lime (CaCO₃)",
-    organicMatter: "Organic Matter",
-    phosphorus: "Phosphorus (P₂O₅)",
-    potassium: "Potassium (K₂O)",
-    nitrogen: "Total Nitrogen",
-    iron: "Iron (Fe)",
-    zinc: "Zinc (Zn)",
-    manganese: "Manganese (Mn)",
-    copper: "Copper (Cu)",
-
-    // Interpretation bands
-    veryLow: "Very low",
-    low: "Low",
-    medium: "Medium",
-    good: "Good",
-    sufficient: "Sufficient",
-    high: "High",
-    veryHigh: "Very high",
-    deficient: "Deficient",
-    marginal: "Marginal",
-    stronglyAcidic: "Strongly acidic",
-    moderatelyAcidic: "Moderately acidic",
-    slightlyAcidic: "Slightly acidic",
-    neutral: "Neutral",
-    slightlyAlkaline: "Slightly alkaline",
-    stronglyAlkaline: "Strongly alkaline",
-    nonSaline: "Non-saline",
-    slightlySaline: "Slightly saline",
-    moderatelySaline: "Moderately saline",
-    highlySaline: "Highly saline",
-    lowLime: "Low lime",
-    calcareous: "Calcareous",
-    moderatelyCalcareous: "Moderately calcareous",
-    highlyCalcareous: "Highly calcareous",
-    veryHighlyCalcareous: "Very highly calcareous",
+    // The parameter names, their units and the interpretation bands are not
+    // here: they live in `shared/soil-parameters.json`, which the server reads
+    // too. See `@/lib/soil`.
 
     textures: {
       sandy: "Sandy",

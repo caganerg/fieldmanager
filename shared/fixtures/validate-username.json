@@ -1,0 +1,31 @@
+{
+  "function": "validateUsername",
+  "$comment": "Checked in the browser for immediate feedback and again on the server, which is why the message has to be the same sentence on both sides. The input here is an already normalised username.",
+  "cases": [
+    {
+      "name": "accepted",
+      "input": "ayse.yilmaz",
+      "expected": null
+    },
+    {
+      "name": "too short",
+      "input": "ay",
+      "expected": "Username must be at least 3 characters."
+    },
+    {
+      "name": "must start with a letter or digit",
+      "input": ".ayse",
+      "expected": "Username may use letters, digits, dot, dash and underscore, and must start with a letter or digit."
+    },
+    {
+      "name": "nothing at all",
+      "input": "",
+      "expected": "Username must be at least 3 characters."
+    },
+    {
+      "name": "digits are fine",
+      "input": "2024-tarla",
+      "expected": null
+    }
+  ]
+}

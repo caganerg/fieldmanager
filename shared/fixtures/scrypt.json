@@ -1,0 +1,34 @@
+{
+  "function": "scrypt",
+  "$comment": "Password hashes written by each side, verified by both. The stored format is `scrypt$<salt base64>$<hash base64>` with Node's default parameters — N=16384, r=8, p=1 — a 16-byte salt and a 64-byte key. `nodeHash` was produced by the runtime the application runs on today and `rustHash` by the Rust half; each runner verifies both, so a parameter changed on either side fails on both. This is the one mistake in the migration that would lock every account out of an installation at once, and nobody can reset a password they cannot sign in to change.",
+  "cases": [
+    {
+      "name": "the documented default administrator password",
+      "password": "admin",
+      "wrongPassword": "Admin",
+      "nodeHash": "scrypt$z5XHCKbs/QzKwn8H5qRiFw==$WKAStktT6/N967poIGokSJSJuXLGYti/E4cMs+g1BaSuQcIMiuPock9gxa298h0D6sXyf3JLFmKsCdXlI4Z5FQ==",
+      "rustHash": "scrypt$bZXcyegkFiL+Fuylsdv8iA==$K0PFzSFWr0ufrkTV2/s5t90nAYELWYgwP5gsxM03dxKWGz/As8Jp/uqfwkt0SUkXEW9WBNSRyomMAlMqwXVcyQ=="
+    },
+    {
+      "name": "a long passphrase",
+      "password": "correct horse battery staple",
+      "wrongPassword": "correct horse battery stapl",
+      "nodeHash": "scrypt$kHivbFGrK/AI9nHWaVcYDw==$e+S46vuvdz5T7A2hKj2imw3Z556Kba+hn9BpucVP8fq1FugcE1wwdk5cg7rSKSpLTF+9+FktY+u/PcVdsyy68w==",
+      "rustHash": "scrypt$iGSOpD4AkgIba9AvDHRIWw==$+YWTQ0my0GuAwImuDHLHKDEkHogVHXaBzyKfghhmXuO1K/hT6ciSxKPalk+c54b/HbRmKbqAsBwMmlntagfYqw=="
+    },
+    {
+      "name": "a password in Turkish",
+      "password": "şifreÇok123!",
+      "wrongPassword": "sifreCok123!",
+      "nodeHash": "scrypt$1lK+kuj5qgjuPB95py3M1g==$5kc602Y7sWz8BmbstAUD4hWjTdE9sIDrS6AMSMAqzXMNOa1RB0EeDkVI/Z6dQfLc3JV/wo7swZhWyJXWWBmmjg==",
+      "rustHash": "scrypt$zfKZxr+HMRTCuVOnHw4YaA==$jOh7w+STX00nqF8DgyUTJTd6eOB63vQKc3oUEu+2W/qP2mWAPRB5Sc4C9KxRPj/e5tH1hwTH8tp0puiDoAIbfQ=="
+    },
+    {
+      "name": "a password with an emoji in it",
+      "password": "tarla😀2026",
+      "wrongPassword": "tarla2026",
+      "nodeHash": "scrypt$T9vsuUbkB7pZJNYkVIqFWQ==$q+nDyiVGXpoUholq4bUNXITFqPBiKh7SN+YH1deWfmzOUzVJNOj7cGK4+OU1e5YiTw7kIIlomeEXRnedT/GBGg==",
+      "rustHash": "scrypt$MTMtcfS5us5+uPt8RFlBlg==$8vGIbTmXCN4FNrJeqKEhBInlJmLoBmaKS/x9+YEsF4/0Ra4IL8/JplglaMxXLaeEou4i9NWNzL91Z0uUHO9KPg=="
+    }
+  ]
+}

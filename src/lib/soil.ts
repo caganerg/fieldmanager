@@ -1,4 +1,5 @@
 import { t } from "@/lib/translations";
+import soilTable from "../../shared/soil-parameters.json";
 
 // Measurements are held as strings because they come straight out of controlled
 // inputs and a blank field has to stay blank — "not measured" is a real state on
@@ -68,159 +69,17 @@ export interface SoilParameter {
   bands: Band[];
 }
 
-// Bands follow the classification tables Turkish soil laboratories print on
-// their reports: pH and salinity on the 1:2.5 saturation extract, phosphorus
-// and potassium as kg/da of P₂O₅ and K₂O, micronutrients as DTPA-extractable
-// ppm. They are interpretation aids, not crop-specific recommendations.
-export const SOIL_PARAMETERS: SoilParameter[] = [
-  {
-    key: "ph",
-    label: t.soil.ph,
-    unit: "",
-    hint: t.soil.phHint,
-    placeholder: "7.2",
-    group: "macro",
-    bands: [
-      { below: 4.5, level: "low", label: t.soil.stronglyAcidic },
-      { below: 5.5, level: "low", label: t.soil.moderatelyAcidic },
-      { below: 6.5, level: "low", label: t.soil.slightlyAcidic },
-      { below: 7.5, level: "optimal", label: t.soil.neutral },
-      { below: 8.5, level: "high", label: t.soil.slightlyAlkaline },
-      { level: "high", label: t.soil.stronglyAlkaline },
-    ],
-  },
-  {
-    key: "ec",
-    label: t.soil.ec,
-    unit: "dS/m",
-    placeholder: "0.8",
-    group: "macro",
-    bands: [
-      { below: 4, level: "optimal", label: t.soil.nonSaline },
-      { below: 8, level: "high", label: t.soil.slightlySaline },
-      { below: 15, level: "high", label: t.soil.moderatelySaline },
-      { level: "high", label: t.soil.highlySaline },
-    ],
-  },
-  {
-    key: "lime",
-    label: t.soil.lime,
-    unit: "%",
-    placeholder: "4.5",
-    group: "macro",
-    bands: [
-      { below: 1, level: "optimal", label: t.soil.lowLime },
-      { below: 5, level: "optimal", label: t.soil.calcareous },
-      { below: 15, level: "high", label: t.soil.moderatelyCalcareous },
-      { below: 25, level: "high", label: t.soil.highlyCalcareous },
-      { level: "high", label: t.soil.veryHighlyCalcareous },
-    ],
-  },
-  {
-    key: "organicMatter",
-    label: t.soil.organicMatter,
-    unit: "%",
-    placeholder: "2.1",
-    group: "macro",
-    bands: [
-      { below: 1, level: "low", label: t.soil.veryLow },
-      { below: 2, level: "low", label: t.soil.low },
-      { below: 3, level: "optimal", label: t.soil.medium },
-      { below: 4, level: "optimal", label: t.soil.good },
-      { level: "high", label: t.soil.high },
-    ],
-  },
-  {
-    key: "phosphorus",
-    label: t.soil.phosphorus,
-    unit: "kg/da",
-    placeholder: "7",
-    group: "macro",
-    bands: [
-      { below: 3, level: "low", label: t.soil.veryLow },
-      { below: 6, level: "low", label: t.soil.low },
-      { below: 9, level: "optimal", label: t.soil.medium },
-      { below: 12, level: "optimal", label: t.soil.high },
-      { level: "high", label: t.soil.veryHigh },
-    ],
-  },
-  {
-    key: "potassium",
-    label: t.soil.potassium,
-    unit: "kg/da",
-    placeholder: "35",
-    group: "macro",
-    bands: [
-      { below: 20, level: "low", label: t.soil.veryLow },
-      { below: 30, level: "low", label: t.soil.low },
-      { below: 40, level: "optimal", label: t.soil.sufficient },
-      { below: 60, level: "optimal", label: t.soil.high },
-      { level: "high", label: t.soil.veryHigh },
-    ],
-  },
-  {
-    key: "nitrogen",
-    label: t.soil.nitrogen,
-    unit: "%",
-    placeholder: "0.12",
-    group: "macro",
-    bands: [
-      { below: 0.045, level: "low", label: t.soil.veryLow },
-      { below: 0.09, level: "low", label: t.soil.low },
-      { below: 0.17, level: "optimal", label: t.soil.medium },
-      { below: 0.32, level: "optimal", label: t.soil.good },
-      { level: "high", label: t.soil.high },
-    ],
-  },
-  {
-    key: "iron",
-    label: t.soil.iron,
-    unit: "ppm",
-    placeholder: "5.0",
-    group: "micro",
-    bands: [
-      { below: 2.5, level: "low", label: t.soil.deficient },
-      { below: 4.5, level: "low", label: t.soil.marginal },
-      { level: "optimal", label: t.soil.sufficient },
-    ],
-  },
-  {
-    key: "zinc",
-    label: t.soil.zinc,
-    unit: "ppm",
-    placeholder: "0.9",
-    group: "micro",
-    bands: [
-      { below: 0.2, level: "low", label: t.soil.veryLow },
-      { below: 0.7, level: "low", label: t.soil.low },
-      { below: 2.4, level: "optimal", label: t.soil.sufficient },
-      { level: "high", label: t.soil.high },
-    ],
-  },
-  {
-    key: "manganese",
-    label: t.soil.manganese,
-    unit: "ppm",
-    placeholder: "10",
-    group: "micro",
-    bands: [
-      { below: 4, level: "low", label: t.soil.deficient },
-      { below: 14, level: "optimal", label: t.soil.sufficient },
-      { level: "high", label: t.soil.high },
-    ],
-  },
-  {
-    key: "copper",
-    label: t.soil.copper,
-    unit: "ppm",
-    placeholder: "1.2",
-    group: "micro",
-    bands: [
-      { below: 0.2, level: "low", label: t.soil.deficient },
-      { level: "optimal", label: t.soil.sufficient },
-    ],
-  },
-];
+/**
+ * The interpretation table, read from `shared/soil-parameters.json`.
+ *
+ * The data is deliberately not written here. The server renders the same bands
+ * into the assistant's prompt ("Organic Matter 1.4 % (Low)"), and a copy of
+ * this table in Rust would be a second answer to what counts as low. The ten
+ * lines of `rateMeasurement` below are written on each side; the thresholds and
+ * the wording are read from the one file. `shared/fixtures/rate-measurement.json`
+ * is what keeps the two readings of it honest.
+ */
+export const SOIL_PARAMETERS = soilTable.parameters as SoilParameter[];
 
 export const SOIL_TEXTURES: string[] = [
   t.soil.textures.sandy,

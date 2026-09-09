@@ -1,0 +1,830 @@
+{
+  "function": "sanitizeDocument",
+  "$comment": "The stored document, as `sanitizeData` and `sanitizeDocument` reduce whatever arrived to it. `~now` and `~nowMs` stand for a value that falls back to the current time: the runner checks that what came back is a timestamp within a minute of now rather than a fixed one.",
+  "cases": [
+    {
+      "name": "a farm's records survive the round trip",
+      "input": {
+        "version": 99,
+        "revision": "7",
+        "updatedAt": "2026-06-09T21:53:06.204Z",
+        "fields": [
+          {
+            "id": "fld-1",
+            "name": "145 Ada 2 Parsel",
+            "coordinates": [
+              [
+                38.72,
+                35.48
+              ],
+              [
+                38.721,
+                35.48
+              ],
+              [
+                38.721,
+                35.482
+              ],
+              [
+                38.72,
+                35.482
+              ]
+            ],
+            "cropType": "Buğday",
+            "plantDate": "2025-10-12",
+            "harvestDate": "2026-07-01T00:00:00.000Z",
+            "groupId": "grp-1",
+            "color": "#16a34a"
+          },
+          {
+            "id": "fld-2",
+            "name": "Dere Kenarı",
+            "coordinates": [
+              [
+                "38.73",
+                "35.49"
+              ],
+              [
+                38.7315,
+                35.49
+              ],
+              [
+                38.7315,
+                35.4925
+              ]
+            ],
+            "cropType": "",
+            "groupId": "",
+            "color": "",
+            "plantDate": ""
+          }
+        ],
+        "groups": [
+          {
+            "id": "grp-1",
+            "name": "Kuzey Bloğu"
+          }
+        ],
+        "soilAnalyses": [
+          {
+            "id": "soil-1",
+            "fieldId": "fld-1",
+            "fieldName": "145 Ada 2 Parsel",
+            "sampleDate": "2025-11-02",
+            "depth": "0-30",
+            "lab": "İl Müdürlüğü Toprak Laboratuvarı",
+            "texture": "Killi tın",
+            "notes": "Örnek dört noktadan alındı.",
+            "ph": "7,4",
+            "ec": "0.6",
+            "lime": "4.2",
+            "organicMatter": "1,4",
+            "phosphorus": "5",
+            "potassium": "38",
+            "nitrogen": "0.08",
+            "iron": "",
+            "zinc": "0.4",
+            "manganese": "",
+            "copper": ""
+          }
+        ],
+        "irrigationLogs": [
+          {
+            "id": "irr-1",
+            "fieldId": "fld-1",
+            "fieldName": "145 Ada 2 Parsel",
+            "date": "2026-06-14",
+            "areaSqm": 12400,
+            "waterM3": 310.5,
+            "method": "drip",
+            "nextDate": "2026-06-21"
+          }
+        ],
+        "fertilizerLogs": [
+          {
+            "id": "fert-1",
+            "fieldName": "145 Ada 2 Parsel",
+            "date": "2026-03-01",
+            "type": "20-20-0",
+            "amount": "25 kg/da"
+          }
+        ],
+        "protectionLogs": [
+          {
+            "id": "prot-1",
+            "fieldId": "fld-1",
+            "fieldName": "145 Ada 2 Parsel",
+            "status": "applied",
+            "date": "2026-05-20",
+            "method": "chemical",
+            "agent": "Deltametrin 25 EC",
+            "target": "Süne",
+            "dose": "80 ml/da",
+            "notes": ""
+          },
+          {
+            "id": "prot-2",
+            "fieldId": "fld-1",
+            "fieldName": "145 Ada 2 Parsel",
+            "status": "planned",
+            "date": "2026-07-05",
+            "method": "biological",
+            "agent": "Trichogramma evanescens",
+            "target": "Mısır kurdu",
+            "dose": "2 kart/da",
+            "notes": "Hava 30 °C altındayken bırakılacak."
+          }
+        ],
+        "activities": [
+          {
+            "id": "act-1",
+            "user": "Ayşe",
+            "action": "Tarla eklendi",
+            "timestamp": 1788900000000,
+            "type": "field_add"
+          },
+          {
+            "id": "act-2",
+            "user": "Field Manager",
+            "action": "Workspace initialized and ready",
+            "timestamp": 1788800000000,
+            "type": "default"
+          }
+        ]
+      },
+      "expected": {
+        "version": 1,
+        "revision": 7,
+        "updatedAt": "2026-06-09T21:53:06.204Z",
+        "fields": [
+          {
+            "id": "fld-1",
+            "name": "145 Ada 2 Parsel",
+            "coordinates": [
+              [
+                38.72,
+                35.48
+              ],
+              [
+                38.721,
+                35.48
+              ],
+              [
+                38.721,
+                35.482
+              ],
+              [
+                38.72,
+                35.482
+              ]
+            ],
+            "cropType": "Buğday",
+            "plantDate": "2025-10-12T00:00:00.000Z",
+            "harvestDate": "2026-07-01T00:00:00.000Z",
+            "groupId": "grp-1",
+            "color": "#16a34a"
+          },
+          {
+            "id": "fld-2",
+            "name": "Dere Kenarı",
+            "coordinates": [
+              [
+                38.73,
+                35.49
+              ],
+              [
+                38.7315,
+                35.49
+              ],
+              [
+                38.7315,
+                35.4925
+              ]
+            ]
+          }
+        ],
+        "groups": [
+          {
+            "id": "grp-1",
+            "name": "Kuzey Bloğu"
+          }
+        ],
+        "soilAnalyses": [
+          {
+            "id": "soil-1",
+            "fieldId": "fld-1",
+            "fieldName": "145 Ada 2 Parsel",
+            "sampleDate": "2025-11-02",
+            "depth": "0-30",
+            "lab": "İl Müdürlüğü Toprak Laboratuvarı",
+            "texture": "Killi tın",
+            "notes": "Örnek dört noktadan alındı.",
+            "ph": "7,4",
+            "ec": "0.6",
+            "lime": "4.2",
+            "organicMatter": "1,4",
+            "phosphorus": "5",
+            "potassium": "38",
+            "nitrogen": "0.08",
+            "iron": "",
+            "zinc": "0.4",
+            "manganese": "",
+            "copper": ""
+          }
+        ],
+        "irrigationLogs": [
+          {
+            "id": "irr-1",
+            "fieldId": "fld-1",
+            "fieldName": "145 Ada 2 Parsel",
+            "date": "2026-06-14",
+            "areaSqm": 12400,
+            "waterM3": 310.5,
+            "method": "drip",
+            "nextDate": "2026-06-21"
+          }
+        ],
+        "fertilizerLogs": [
+          {
+            "id": "fert-1",
+            "fieldName": "145 Ada 2 Parsel",
+            "date": "2026-03-01",
+            "type": "20-20-0",
+            "amount": "25 kg/da"
+          }
+        ],
+        "protectionLogs": [
+          {
+            "id": "prot-1",
+            "fieldId": "fld-1",
+            "fieldName": "145 Ada 2 Parsel",
+            "status": "applied",
+            "date": "2026-05-20",
+            "method": "chemical",
+            "agent": "Deltametrin 25 EC",
+            "target": "Süne",
+            "dose": "80 ml/da",
+            "notes": ""
+          },
+          {
+            "id": "prot-2",
+            "fieldId": "fld-1",
+            "fieldName": "145 Ada 2 Parsel",
+            "status": "planned",
+            "date": "2026-07-05",
+            "method": "biological",
+            "agent": "Trichogramma evanescens",
+            "target": "Mısır kurdu",
+            "dose": "2 kart/da",
+            "notes": "Hava 30 °C altındayken bırakılacak."
+          }
+        ],
+        "activities": [
+          {
+            "id": "act-1",
+            "user": "Ayşe",
+            "action": "Tarla eklendi",
+            "timestamp": 1788900000000,
+            "type": "field_add"
+          },
+          {
+            "id": "act-2",
+            "user": "Field Manager",
+            "action": "Workspace initialized and ready",
+            "timestamp": 1788800000000,
+            "type": "default"
+          }
+        ]
+      }
+    },
+    {
+      "name": "anything that is not an object is an empty document",
+      "input": "fieldmanager.json is a farm, not a string",
+      "expected": {
+        "version": 1,
+        "revision": 0,
+        "updatedAt": "~now",
+        "fields": [],
+        "groups": [],
+        "soilAnalyses": [],
+        "irrigationLogs": [],
+        "fertilizerLogs": [],
+        "protectionLogs": [],
+        "activities": []
+      }
+    },
+    {
+      "name": "a document with nothing in it keeps its shape",
+      "input": {},
+      "expected": {
+        "version": 1,
+        "revision": 0,
+        "updatedAt": "~now",
+        "fields": [],
+        "groups": [],
+        "soilAnalyses": [],
+        "irrigationLogs": [],
+        "fertilizerLogs": [],
+        "protectionLogs": [],
+        "activities": []
+      }
+    },
+    {
+      "name": "a hostile payload keeps only what can be read",
+      "input": {
+        "revision": -4,
+        "updatedAt": "yesterday",
+        "fields": [
+          {
+            "id": "",
+            "name": "no id"
+          },
+          {
+            "id": "fld-ok",
+            "coordinates": [
+              [
+                38.7,
+                35.4
+              ],
+              [
+                38.71,
+                35.4
+              ],
+              [
+                38.71,
+                35.41
+              ]
+            ],
+            "name": 42,
+            "cropType": {
+              "toString": "no"
+            }
+          },
+          {
+            "id": "fld-flat",
+            "name": "two corners",
+            "coordinates": [
+              [
+                38.7,
+                35.4
+              ],
+              [
+                38.71,
+                35.4
+              ]
+            ]
+          },
+          {
+            "id": "fld-range",
+            "name": "off the planet",
+            "coordinates": [
+              [
+                91,
+                35.4
+              ],
+              [
+                38.71,
+                35.4
+              ],
+              [
+                38.71,
+                35.41
+              ],
+              [
+                38.72,
+                35.42
+              ],
+              [
+                null,
+                35.4
+              ]
+            ]
+          },
+          "not a field",
+          null
+        ],
+        "groups": "not an array",
+        "soilAnalyses": [
+          {
+            "id": "soil-x",
+            "ph": 7.4,
+            "notes": null
+          }
+        ],
+        "irrigationLogs": [
+          {
+            "id": "irr-x",
+            "date": "2026-13-45",
+            "areaSqm": -20,
+            "waterM3": "not a number",
+            "method": "carrier pigeon",
+            "nextDate": 20260621
+          }
+        ],
+        "fertilizerLogs": [
+          {
+            "id": "fert-x",
+            "type": true,
+            "amount": 25
+          }
+        ],
+        "protectionLogs": [
+          {
+            "id": "prot-x",
+            "status": "maybe",
+            "method": "manual",
+            "date": "2026-02-30"
+          }
+        ],
+        "activities": [
+          {
+            "id": "act-x",
+            "user": 7,
+            "action": "",
+            "timestamp": "not a time",
+            "type": "danced"
+          }
+        ]
+      },
+      "expected": {
+        "version": 1,
+        "revision": 0,
+        "updatedAt": "~now",
+        "fields": [
+          {
+            "id": "fld-ok",
+            "name": "",
+            "coordinates": [
+              [
+                38.7,
+                35.4
+              ],
+              [
+                38.71,
+                35.4
+              ],
+              [
+                38.71,
+                35.41
+              ]
+            ]
+          },
+          {
+            "id": "fld-range",
+            "name": "off the planet",
+            "coordinates": [
+              [
+                38.71,
+                35.4
+              ],
+              [
+                38.71,
+                35.41
+              ],
+              [
+                38.72,
+                35.42
+              ],
+              [
+                0,
+                35.4
+              ]
+            ]
+          }
+        ],
+        "groups": [],
+        "soilAnalyses": [
+          {
+            "id": "soil-x",
+            "fieldId": "",
+            "fieldName": "",
+            "sampleDate": "",
+            "depth": "",
+            "lab": "",
+            "texture": "",
+            "notes": "",
+            "ph": "",
+            "ec": "",
+            "lime": "",
+            "organicMatter": "",
+            "phosphorus": "",
+            "potassium": "",
+            "nitrogen": "",
+            "iron": "",
+            "zinc": "",
+            "manganese": "",
+            "copper": ""
+          }
+        ],
+        "irrigationLogs": [
+          {
+            "id": "irr-x",
+            "fieldId": "",
+            "fieldName": "",
+            "date": "",
+            "areaSqm": 0,
+            "waterM3": 0,
+            "method": "other",
+            "nextDate": ""
+          }
+        ],
+        "fertilizerLogs": [
+          {
+            "id": "fert-x",
+            "fieldName": "",
+            "date": "",
+            "type": "",
+            "amount": ""
+          }
+        ],
+        "protectionLogs": [
+          {
+            "id": "prot-x",
+            "fieldId": "",
+            "fieldName": "",
+            "status": "applied",
+            "date": "2026-02-30",
+            "method": "chemical",
+            "agent": "",
+            "target": "",
+            "dose": "",
+            "notes": ""
+          }
+        ],
+        "activities": [
+          {
+            "id": "act-x",
+            "user": "",
+            "action": "",
+            "timestamp": "~nowMs",
+            "type": "default"
+          }
+        ]
+      }
+    },
+    {
+      "name": "records from before the numeric upgrade still read",
+      "input": {
+        "revision": 3,
+        "updatedAt": "2026-01-04T08:00:00.000Z",
+        "irrigationLogs": [
+          {
+            "id": "irr-old-1",
+            "fieldId": "fld-1",
+            "fieldName": "145 Ada 2 Parsel",
+            "date": "2025-07-02",
+            "amount": "20 m³",
+            "method": "Drip Irrigation"
+          },
+          {
+            "id": "irr-old-2",
+            "fieldId": "fld-1",
+            "fieldName": "145 Ada 2 Parsel",
+            "date": "2025-07-09",
+            "amount": "18,5 m³",
+            "method": "Flood / Furrow"
+          }
+        ],
+        "protectionLogs": [
+          {
+            "id": "prot-old",
+            "fieldId": "fld-1",
+            "fieldName": "145 Ada 2 Parsel",
+            "date": "2025-08-01",
+            "method": "chemical",
+            "agent": "Kükürt",
+            "target": "Külleme",
+            "dose": "",
+            "notes": ""
+          }
+        ]
+      },
+      "expected": {
+        "version": 1,
+        "revision": 3,
+        "updatedAt": "2026-01-04T08:00:00.000Z",
+        "fields": [],
+        "groups": [],
+        "soilAnalyses": [],
+        "irrigationLogs": [
+          {
+            "id": "irr-old-1",
+            "fieldId": "fld-1",
+            "fieldName": "145 Ada 2 Parsel",
+            "date": "2025-07-02",
+            "areaSqm": 0,
+            "waterM3": 20,
+            "method": "drip",
+            "nextDate": ""
+          },
+          {
+            "id": "irr-old-2",
+            "fieldId": "fld-1",
+            "fieldName": "145 Ada 2 Parsel",
+            "date": "2025-07-09",
+            "areaSqm": 0,
+            "waterM3": 18,
+            "method": "furrow",
+            "nextDate": ""
+          }
+        ],
+        "fertilizerLogs": [],
+        "protectionLogs": [
+          {
+            "id": "prot-old",
+            "fieldId": "fld-1",
+            "fieldName": "145 Ada 2 Parsel",
+            "status": "applied",
+            "date": "2025-08-01",
+            "method": "chemical",
+            "agent": "Kükürt",
+            "target": "Külleme",
+            "dose": "",
+            "notes": ""
+          }
+        ],
+        "activities": []
+      }
+    },
+    {
+      "name": "what cannot be dated falls back to now",
+      "input": {
+        "revision": 1,
+        "activities": [
+          {
+            "id": "act-undated",
+            "user": "Ayşe",
+            "action": "Tarla düzenlendi",
+            "type": "field_edit"
+          }
+        ]
+      },
+      "expected": {
+        "version": 1,
+        "revision": 1,
+        "updatedAt": "~now",
+        "fields": [],
+        "groups": [],
+        "soilAnalyses": [],
+        "irrigationLogs": [],
+        "fertilizerLogs": [],
+        "protectionLogs": [],
+        "activities": [
+          {
+            "id": "act-undated",
+            "user": "Ayşe",
+            "action": "Tarla düzenlendi",
+            "timestamp": "~nowMs",
+            "type": "field_edit"
+          }
+        ]
+      }
+    },
+    {
+      "name": "text is cut to the limit it is given",
+      "input": {
+        "revision": 0,
+        "updatedAt": "2026-01-04T08:00:00.000Z",
+        "fields": [
+          {
+            "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "name": "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+            "coordinates": [
+              [
+                38.7,
+                35.4
+              ],
+              [
+                38.71,
+                35.4
+              ],
+              [
+                38.71,
+                35.41
+              ]
+            ],
+            "color": "cccccccccccccccccccccccccccccccccccccccc"
+          }
+        ],
+        "protectionLogs": [
+          {
+            "id": "prot-dose",
+            "dose": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd😀",
+            "notes": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+          }
+        ]
+      },
+      "expected": {
+        "version": 1,
+        "revision": 0,
+        "updatedAt": "2026-01-04T08:00:00.000Z",
+        "fields": [
+          {
+            "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "name": "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN",
+            "coordinates": [
+              [
+                38.7,
+                35.4
+              ],
+              [
+                38.71,
+                35.4
+              ],
+              [
+                38.71,
+                35.41
+              ]
+            ],
+            "color": "cccccccccccccccccccccccccccccccc"
+          }
+        ],
+        "groups": [],
+        "soilAnalyses": [],
+        "irrigationLogs": [],
+        "fertilizerLogs": [],
+        "protectionLogs": [
+          {
+            "id": "prot-dose",
+            "fieldId": "",
+            "fieldName": "",
+            "status": "applied",
+            "date": "",
+            "method": "chemical",
+            "agent": "",
+            "target": "",
+            "dose": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd😀",
+            "notes": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+          }
+        ],
+        "activities": []
+      }
+    },
+    {
+      "name": "a coordinate keeps every digit it was sent with",
+      "input": {
+        "revision": 12,
+        "updatedAt": "2026-01-04T08:00:00.000Z",
+        "fields": [
+          {
+            "id": "fld-precise",
+            "name": "104 Ada 5 Parsel",
+            "coordinates": [
+              [
+                38.795949742794036,
+                35.29813000059128
+              ],
+              [
+                38.79386430501938,
+                35.297295798778535
+              ],
+              [
+                38.79609451055527,
+                35.297632342815405
+              ],
+              [
+                39,
+                35
+              ]
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "version": 1,
+        "revision": 12,
+        "updatedAt": "2026-01-04T08:00:00.000Z",
+        "fields": [
+          {
+            "id": "fld-precise",
+            "name": "104 Ada 5 Parsel",
+            "coordinates": [
+              [
+                38.795949742794036,
+                35.29813000059128
+              ],
+              [
+                38.79386430501938,
+                35.297295798778535
+              ],
+              [
+                38.79609451055527,
+                35.297632342815405
+              ],
+              [
+                39,
+                35
+              ]
+            ]
+          }
+        ],
+        "groups": [],
+        "soilAnalyses": [],
+        "irrigationLogs": [],
+        "fertilizerLogs": [],
+        "protectionLogs": [],
+        "activities": []
+      }
+    }
+  ]
+}

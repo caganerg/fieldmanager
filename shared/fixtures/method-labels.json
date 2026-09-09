@@ -1,0 +1,62 @@
+{
+  "function": "methodLabel",
+  "$comment": "How a method is spelled out in a sentence. The server renders these into the assistant's prompt and the browser renders them into the dialog, so they are two implementations of one list.",
+  "cases": [
+    {
+      "name": "irrigation drip",
+      "input": {
+        "kind": "irrigation",
+        "method": "drip"
+      },
+      "expected": "Drip irrigation"
+    },
+    {
+      "name": "irrigation sprinkler",
+      "input": {
+        "kind": "irrigation",
+        "method": "sprinkler"
+      },
+      "expected": "Sprinkler"
+    },
+    {
+      "name": "irrigation furrow",
+      "input": {
+        "kind": "irrigation",
+        "method": "furrow"
+      },
+      "expected": "Flood / furrow"
+    },
+    {
+      "name": "irrigation pivot",
+      "input": {
+        "kind": "irrigation",
+        "method": "pivot"
+      },
+      "expected": "Center pivot"
+    },
+    {
+      "name": "irrigation other",
+      "input": {
+        "kind": "irrigation",
+        "method": "other"
+      },
+      "expected": "Other"
+    },
+    {
+      "name": "protection biological",
+      "input": {
+        "kind": "protection",
+        "method": "biological"
+      },
+      "expected": "Biological control"
+    },
+    {
+      "name": "protection chemical",
+      "input": {
+        "kind": "protection",
+        "method": "chemical"
+      },
+      "expected": "Chemical control"
+    }
+  ]
+}

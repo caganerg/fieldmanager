@@ -624,6 +624,84 @@ and expensive to discover late.
 
 **Blast radius:** none; nothing imports it yet.
 
+#### Status
+
+Built. `backend/crates/domain` holds the types and the sanitisers, the soil
+table now lives in `shared/soil-parameters.json` and is read by both sides, and
+`shared/fixtures/` holds input-and-expected pairs that `cargo test -p
+fieldmanager-domain` and `bun test` both run. A fixture naming a function
+neither runner knows fails rather than skips: a fixture nobody runs is worse
+than no fixture, because it reads like coverage.
+
+Acceptance, answered:
+
+| | Result |
+| --- | --- |
+| a farm re-serialised by Rust | byte-identical to `JSON.stringify(sanitizeDocument(...))` — 177 KB, 120 fields, 400 irrigation records, 64 activities, legacy and hostile values throughout |
+| the installed `data/fieldmanager.json` | identical apart from `updatedAt`, which is meant to move |
+| scrypt | Rust verifies a hash Bun wrote, Bun verifies a hash Rust wrote, both refuse the near-miss password |
+| fixtures | 65 cases on the TypeScript side, the same files on the Rust side |
+
+**`js.rs` is the load-bearing module**, and it was not in the plan. Every
+`sanitize*` function is specified in the language it was written in —
+`String.prototype.slice` counts UTF-16 code units, `Number(null)` is zero,
+`parseFloat("20 m³")` is twenty, `Date.parse` decides what a date is. Porting
+them with Rust's rules instead would have produced a sanitiser that agrees on
+the records this farm holds today and disagrees on the next hand-edited file.
+So the coercions live in one module, named after the JavaScript expression each
+one stands for, and the ports read almost line for line like the modules they
+came from.
+
+Four things the fixtures caught that a reading of the TypeScript would not:
+
+- **`JSON.stringify` writes `500`, `serde_json` writes `500.0`.** Every number
+  that reaches the document goes through `js::JsNumber`, which serialises the
+  way JavaScript does — including the exponent thresholds and `null` for a NaN.
+  A coordinate on a whole degree is enough to break the comparison without it.
+- **`serde_json` does not parse doubles exactly by default.** A coordinate
+  written as `38.795949742794036` came back a digit short, which is a different
+  number in the file than the browser sent. The `float_roundtrip` feature is
+  therefore not optional, and there is a fixture for it.
+- **`Date.parse("2026-02-30")` is the second of March, not a NaN.** The
+  grammar bounds the month at 12 and the day at 31 and then lets `MakeDay` roll
+  the excess forward, so `2026-13-45` loses its date and `2026-02-30` keeps one
+  in March. Both are fixtures now.
+- **`Number(x)` is not `x.parse::<f64>()`.** `Number(null)` is zero, so a
+  coordinate of `[null, 35.4]` is kept as `[0, 35.4]` rather than dropped —
+  which the hostile-payload fixture pins in place.
+
+Two deliberate departures, both narrowing rather than widening:
+
+- **A split surrogate pair is dropped whole.** `"…😀".slice(0, 63)` keeps the
+  leading half as a lone surrogate, which no Rust `String` can hold; truncation
+  stops one code unit earlier instead. It costs a character when a name longer
+  than the limit ends on an astral character at exactly the wrong offset.
+- **`date_parse` implements the Date Time String Format and nothing else.**
+  Anything outside it is implementation-defined in JavaScript — V8 reads
+  `"May 1, 2024"`, other engines need not — and the application only ever
+  stores `toISOString()` output or a date input's `YYYY-MM-DD`.
+
+Two things were deliberately left out of this slice:
+
+- **The `ts-rs` type generation** described in section 2b. Generating
+  `src/lib/generated/` now would mean changing the frontend for a crate nothing
+  imports, which is not "blast radius: none". It belongs with slice 4, where
+  Rust becomes the authority and the TypeScript sanitisers are deleted; the
+  serde `rename_all = "camelCase"` the generation needs is already in place.
+- **`store/`, `ai/` and `tools/import-json/`** from the layout in section 5.
+  Each arrives with the slice that needs it.
+
+`password.rs` sits in `domain` rather than waiting for `store`, which section 5
+did not plan for. It is not part of what is isomorphic — the browser never
+hashes anything — but the hash format is a contract with the file that already
+exists, and slice 4 should find one implementation rather than write a second
+beside a test that proved a third. Every call still belongs in
+`spawn_blocking`, for the reason the plan already gives.
+
+One build detail worth keeping: `[profile.dev.package."*"] opt-level = 2` in the
+workspace manifest. `scrypt` is deliberately expensive, and unoptimised it turns
+the password fixtures from a second into half a minute of every `cargo test`.
+
 ---
 
 ### Slice 3 — `/api/ai`: the read-only half of the backend

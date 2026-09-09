@@ -1,0 +1,88 @@
+{
+  "function": "polygonArea",
+  "$comment": "The area of a field in square metres, by the spherical excess formula. Both sides compute it — the map draws it, the assistant states it in decares — so a disagreement here is one the farmer would see. Compared within a relative tolerance rather than exactly: the two runtimes' `sin` may differ in the last bit.",
+  "tolerance": 1e-9,
+  "cases": [
+    {
+      "name": "a parcel in Kayseri",
+      "input": [
+        [
+          38.72,
+          35.48
+        ],
+        [
+          38.721,
+          35.48
+        ],
+        [
+          38.721,
+          35.482
+        ],
+        [
+          38.72,
+          35.482
+        ]
+      ],
+      "expected": 19293.43644577632
+    },
+    {
+      "name": "a triangle",
+      "input": [
+        [
+          38.73,
+          35.49
+        ],
+        [
+          38.7315,
+          35.49
+        ],
+        [
+          38.7315,
+          35.4925
+        ]
+      ],
+      "expected": 18085.00211036329
+    },
+    {
+      "name": "wound the other way",
+      "input": [
+        [
+          38.72,
+          35.482
+        ],
+        [
+          38.721,
+          35.482
+        ],
+        [
+          38.721,
+          35.48
+        ],
+        [
+          38.72,
+          35.48
+        ]
+      ],
+      "expected": 19293.43644577632
+    },
+    {
+      "name": "two corners is not a polygon",
+      "input": [
+        [
+          38.72,
+          35.48
+        ],
+        [
+          38.721,
+          35.48
+        ]
+      ],
+      "expected": 0
+    },
+    {
+      "name": "nothing drawn",
+      "input": [],
+      "expected": 0
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "function": "normalizeUsername",
+  "$comment": "Usernames are compared case-insensitively and limited to characters that survive a URL, a shell and a JSON file unchanged.",
+  "cases": [
+    {
+      "name": "trimmed and lowercased",
+      "input": "  Ayse.Yilmaz  ",
+      "expected": "ayse.yilmaz"
+    },
+    {
+      "name": "characters that would not survive are dropped",
+      "input": "ayşe yılmaz!",
+      "expected": "ayeylmaz"
+    },
+    {
+      "name": "already normal",
+      "input": "admin",
+      "expected": "admin"
+    },
+    {
+      "name": "cut to the limit",
+      "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "expected": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "name": "nothing left",
+      "input": "!!!",
+      "expected": ""
+    },
+    {
+      "name": "not a string",
+      "input": 42,
+      "expected": ""
+    }
+  ]
+}

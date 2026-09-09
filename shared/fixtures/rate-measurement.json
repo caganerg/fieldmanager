@@ -1,0 +1,176 @@
+{
+  "function": "rateMeasurement",
+  "$comment": "A reading and the band it falls in, read from `shared/soil-parameters.json` by both sides. The wording matters as much as the level: it is what the dialog shows and what the assistant is told, and AGENTS.md's rule is that those two cannot disagree.",
+  "cases": [
+    {
+      "name": "ph 7,4",
+      "input": {
+        "key": "ph",
+        "value": "7,4"
+      },
+      "expected": {
+        "level": "optimal",
+        "label": "Neutral"
+      }
+    },
+    {
+      "name": "ph 4.4",
+      "input": {
+        "key": "ph",
+        "value": "4.4"
+      },
+      "expected": {
+        "level": "low",
+        "label": "Strongly acidic"
+      }
+    },
+    {
+      "name": "ph 8.9",
+      "input": {
+        "key": "ph",
+        "value": "8.9"
+      },
+      "expected": {
+        "level": "high",
+        "label": "Strongly alkaline"
+      }
+    },
+    {
+      "name": "organicMatter 1,4",
+      "input": {
+        "key": "organicMatter",
+        "value": "1,4"
+      },
+      "expected": {
+        "level": "low",
+        "label": "Low"
+      }
+    },
+    {
+      "name": "organicMatter  3 ",
+      "input": {
+        "key": "organicMatter",
+        "value": " 3 "
+      },
+      "expected": {
+        "level": "optimal",
+        "label": "Good"
+      }
+    },
+    {
+      "name": "organicMatter (blank)",
+      "input": {
+        "key": "organicMatter",
+        "value": ""
+      },
+      "expected": null
+    },
+    {
+      "name": "organicMatter çok",
+      "input": {
+        "key": "organicMatter",
+        "value": "çok"
+      },
+      "expected": null
+    },
+    {
+      "name": "nitrogen 0.045",
+      "input": {
+        "key": "nitrogen",
+        "value": "0.045"
+      },
+      "expected": {
+        "level": "low",
+        "label": "Low"
+      }
+    },
+    {
+      "name": "phosphorus 12",
+      "input": {
+        "key": "phosphorus",
+        "value": "12"
+      },
+      "expected": {
+        "level": "high",
+        "label": "Very high"
+      }
+    },
+    {
+      "name": "potassium 38",
+      "input": {
+        "key": "potassium",
+        "value": "38"
+      },
+      "expected": {
+        "level": "optimal",
+        "label": "Sufficient"
+      }
+    },
+    {
+      "name": "ec 0.6",
+      "input": {
+        "key": "ec",
+        "value": "0.6"
+      },
+      "expected": {
+        "level": "optimal",
+        "label": "Non-saline"
+      }
+    },
+    {
+      "name": "lime 25",
+      "input": {
+        "key": "lime",
+        "value": "25"
+      },
+      "expected": {
+        "level": "high",
+        "label": "Very highly calcareous"
+      }
+    },
+    {
+      "name": "iron 5.0",
+      "input": {
+        "key": "iron",
+        "value": "5.0"
+      },
+      "expected": {
+        "level": "optimal",
+        "label": "Sufficient"
+      }
+    },
+    {
+      "name": "zinc 0.2",
+      "input": {
+        "key": "zinc",
+        "value": "0.2"
+      },
+      "expected": {
+        "level": "low",
+        "label": "Low"
+      }
+    },
+    {
+      "name": "manganese 14",
+      "input": {
+        "key": "manganese",
+        "value": "14"
+      },
+      "expected": {
+        "level": "high",
+        "label": "High"
+      }
+    },
+    {
+      "name": "copper 0.19",
+      "input": {
+        "key": "copper",
+        "value": "0.19"
+      },
+      "expected": {
+        "level": "low",
+        "label": "Deficient"
+      }
+    }
+  ]
+}

@@ -89,7 +89,25 @@ Other commands:
 bun run build   # production build
 bun run start   # serve the production build
 bun run lint    # eslint
+bun run test    # the shared fixtures, on the TypeScript side
 ```
+
+### The tests both halves run
+
+While the backend is being rewritten, some of the application is defined twice:
+once in `src/lib` and once in `backend/crates/domain`. `shared/` is what keeps
+the two from drifting. `shared/soil-parameters.json` holds the soil
+interpretation table, read by both sides so the screen and the assistant cannot
+disagree about what counts as low; `shared/fixtures/` holds input-and-expected
+pairs that both sides run:
+
+```bash
+bun run test                            # the fixtures, against src/lib
+cd backend && cargo test                # the same files, against the domain crate
+```
+
+Adding a fixture is how an edge case gets fixed for good: write the case, and
+both sides fail until both sides agree.
 
 ## 💾 Where Your Data Lives
 

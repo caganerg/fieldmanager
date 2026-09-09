@@ -1,0 +1,756 @@
+{
+  "function": "sanitizeDocument",
+  "$comment": "The ceilings. They are not expectations — they are what keeps a malformed or hostile payload from filling the disk — and the one that is cheap to write out is the activity log's, which is also the one a user would notice.",
+  "cases": [
+    {
+      "name": "the activity log keeps the first fifty entries",
+      "input": {
+        "revision": 0,
+        "updatedAt": "2026-01-04T08:00:00.000Z",
+        "activities": [
+          {
+            "id": "act-0",
+            "user": "Ayşe",
+            "action": "entry 0",
+            "timestamp": 1788000000000,
+            "type": "default"
+          },
+          {
+            "id": "act-1",
+            "user": "Ayşe",
+            "action": "entry 1",
+            "timestamp": 1788000001000,
+            "type": "default"
+          },
+          {
+            "id": "act-2",
+            "user": "Ayşe",
+            "action": "entry 2",
+            "timestamp": 1788000002000,
+            "type": "default"
+          },
+          {
+            "id": "act-3",
+            "user": "Ayşe",
+            "action": "entry 3",
+            "timestamp": 1788000003000,
+            "type": "default"
+          },
+          {
+            "id": "act-4",
+            "user": "Ayşe",
+            "action": "entry 4",
+            "timestamp": 1788000004000,
+            "type": "default"
+          },
+          {
+            "id": "act-5",
+            "user": "Ayşe",
+            "action": "entry 5",
+            "timestamp": 1788000005000,
+            "type": "default"
+          },
+          {
+            "id": "act-6",
+            "user": "Ayşe",
+            "action": "entry 6",
+            "timestamp": 1788000006000,
+            "type": "default"
+          },
+          {
+            "id": "act-7",
+            "user": "Ayşe",
+            "action": "entry 7",
+            "timestamp": 1788000007000,
+            "type": "default"
+          },
+          {
+            "id": "act-8",
+            "user": "Ayşe",
+            "action": "entry 8",
+            "timestamp": 1788000008000,
+            "type": "default"
+          },
+          {
+            "id": "act-9",
+            "user": "Ayşe",
+            "action": "entry 9",
+            "timestamp": 1788000009000,
+            "type": "default"
+          },
+          {
+            "id": "act-10",
+            "user": "Ayşe",
+            "action": "entry 10",
+            "timestamp": 1788000010000,
+            "type": "default"
+          },
+          {
+            "id": "act-11",
+            "user": "Ayşe",
+            "action": "entry 11",
+            "timestamp": 1788000011000,
+            "type": "default"
+          },
+          {
+            "id": "act-12",
+            "user": "Ayşe",
+            "action": "entry 12",
+            "timestamp": 1788000012000,
+            "type": "default"
+          },
+          {
+            "id": "act-13",
+            "user": "Ayşe",
+            "action": "entry 13",
+            "timestamp": 1788000013000,
+            "type": "default"
+          },
+          {
+            "id": "act-14",
+            "user": "Ayşe",
+            "action": "entry 14",
+            "timestamp": 1788000014000,
+            "type": "default"
+          },
+          {
+            "id": "act-15",
+            "user": "Ayşe",
+            "action": "entry 15",
+            "timestamp": 1788000015000,
+            "type": "default"
+          },
+          {
+            "id": "act-16",
+            "user": "Ayşe",
+            "action": "entry 16",
+            "timestamp": 1788000016000,
+            "type": "default"
+          },
+          {
+            "id": "act-17",
+            "user": "Ayşe",
+            "action": "entry 17",
+            "timestamp": 1788000017000,
+            "type": "default"
+          },
+          {
+            "id": "act-18",
+            "user": "Ayşe",
+            "action": "entry 18",
+            "timestamp": 1788000018000,
+            "type": "default"
+          },
+          {
+            "id": "act-19",
+            "user": "Ayşe",
+            "action": "entry 19",
+            "timestamp": 1788000019000,
+            "type": "default"
+          },
+          {
+            "id": "act-20",
+            "user": "Ayşe",
+            "action": "entry 20",
+            "timestamp": 1788000020000,
+            "type": "default"
+          },
+          {
+            "id": "act-21",
+            "user": "Ayşe",
+            "action": "entry 21",
+            "timestamp": 1788000021000,
+            "type": "default"
+          },
+          {
+            "id": "act-22",
+            "user": "Ayşe",
+            "action": "entry 22",
+            "timestamp": 1788000022000,
+            "type": "default"
+          },
+          {
+            "id": "act-23",
+            "user": "Ayşe",
+            "action": "entry 23",
+            "timestamp": 1788000023000,
+            "type": "default"
+          },
+          {
+            "id": "act-24",
+            "user": "Ayşe",
+            "action": "entry 24",
+            "timestamp": 1788000024000,
+            "type": "default"
+          },
+          {
+            "id": "act-25",
+            "user": "Ayşe",
+            "action": "entry 25",
+            "timestamp": 1788000025000,
+            "type": "default"
+          },
+          {
+            "id": "act-26",
+            "user": "Ayşe",
+            "action": "entry 26",
+            "timestamp": 1788000026000,
+            "type": "default"
+          },
+          {
+            "id": "act-27",
+            "user": "Ayşe",
+            "action": "entry 27",
+            "timestamp": 1788000027000,
+            "type": "default"
+          },
+          {
+            "id": "act-28",
+            "user": "Ayşe",
+            "action": "entry 28",
+            "timestamp": 1788000028000,
+            "type": "default"
+          },
+          {
+            "id": "act-29",
+            "user": "Ayşe",
+            "action": "entry 29",
+            "timestamp": 1788000029000,
+            "type": "default"
+          },
+          {
+            "id": "act-30",
+            "user": "Ayşe",
+            "action": "entry 30",
+            "timestamp": 1788000030000,
+            "type": "default"
+          },
+          {
+            "id": "act-31",
+            "user": "Ayşe",
+            "action": "entry 31",
+            "timestamp": 1788000031000,
+            "type": "default"
+          },
+          {
+            "id": "act-32",
+            "user": "Ayşe",
+            "action": "entry 32",
+            "timestamp": 1788000032000,
+            "type": "default"
+          },
+          {
+            "id": "act-33",
+            "user": "Ayşe",
+            "action": "entry 33",
+            "timestamp": 1788000033000,
+            "type": "default"
+          },
+          {
+            "id": "act-34",
+            "user": "Ayşe",
+            "action": "entry 34",
+            "timestamp": 1788000034000,
+            "type": "default"
+          },
+          {
+            "id": "act-35",
+            "user": "Ayşe",
+            "action": "entry 35",
+            "timestamp": 1788000035000,
+            "type": "default"
+          },
+          {
+            "id": "act-36",
+            "user": "Ayşe",
+            "action": "entry 36",
+            "timestamp": 1788000036000,
+            "type": "default"
+          },
+          {
+            "id": "act-37",
+            "user": "Ayşe",
+            "action": "entry 37",
+            "timestamp": 1788000037000,
+            "type": "default"
+          },
+          {
+            "id": "act-38",
+            "user": "Ayşe",
+            "action": "entry 38",
+            "timestamp": 1788000038000,
+            "type": "default"
+          },
+          {
+            "id": "act-39",
+            "user": "Ayşe",
+            "action": "entry 39",
+            "timestamp": 1788000039000,
+            "type": "default"
+          },
+          {
+            "id": "act-40",
+            "user": "Ayşe",
+            "action": "entry 40",
+            "timestamp": 1788000040000,
+            "type": "default"
+          },
+          {
+            "id": "act-41",
+            "user": "Ayşe",
+            "action": "entry 41",
+            "timestamp": 1788000041000,
+            "type": "default"
+          },
+          {
+            "id": "act-42",
+            "user": "Ayşe",
+            "action": "entry 42",
+            "timestamp": 1788000042000,
+            "type": "default"
+          },
+          {
+            "id": "act-43",
+            "user": "Ayşe",
+            "action": "entry 43",
+            "timestamp": 1788000043000,
+            "type": "default"
+          },
+          {
+            "id": "act-44",
+            "user": "Ayşe",
+            "action": "entry 44",
+            "timestamp": 1788000044000,
+            "type": "default"
+          },
+          {
+            "id": "act-45",
+            "user": "Ayşe",
+            "action": "entry 45",
+            "timestamp": 1788000045000,
+            "type": "default"
+          },
+          {
+            "id": "act-46",
+            "user": "Ayşe",
+            "action": "entry 46",
+            "timestamp": 1788000046000,
+            "type": "default"
+          },
+          {
+            "id": "act-47",
+            "user": "Ayşe",
+            "action": "entry 47",
+            "timestamp": 1788000047000,
+            "type": "default"
+          },
+          {
+            "id": "act-48",
+            "user": "Ayşe",
+            "action": "entry 48",
+            "timestamp": 1788000048000,
+            "type": "default"
+          },
+          {
+            "id": "act-49",
+            "user": "Ayşe",
+            "action": "entry 49",
+            "timestamp": 1788000049000,
+            "type": "default"
+          },
+          {
+            "id": "act-50",
+            "user": "Ayşe",
+            "action": "entry 50",
+            "timestamp": 1788000050000,
+            "type": "default"
+          },
+          {
+            "id": "act-51",
+            "user": "Ayşe",
+            "action": "entry 51",
+            "timestamp": 1788000051000,
+            "type": "default"
+          },
+          {
+            "id": "act-52",
+            "user": "Ayşe",
+            "action": "entry 52",
+            "timestamp": 1788000052000,
+            "type": "default"
+          },
+          {
+            "id": "act-53",
+            "user": "Ayşe",
+            "action": "entry 53",
+            "timestamp": 1788000053000,
+            "type": "default"
+          }
+        ]
+      },
+      "expected": {
+        "version": 1,
+        "revision": 0,
+        "updatedAt": "2026-01-04T08:00:00.000Z",
+        "fields": [],
+        "groups": [],
+        "soilAnalyses": [],
+        "irrigationLogs": [],
+        "fertilizerLogs": [],
+        "protectionLogs": [],
+        "activities": [
+          {
+            "id": "act-0",
+            "user": "Ayşe",
+            "action": "entry 0",
+            "timestamp": 1788000000000,
+            "type": "default"
+          },
+          {
+            "id": "act-1",
+            "user": "Ayşe",
+            "action": "entry 1",
+            "timestamp": 1788000001000,
+            "type": "default"
+          },
+          {
+            "id": "act-2",
+            "user": "Ayşe",
+            "action": "entry 2",
+            "timestamp": 1788000002000,
+            "type": "default"
+          },
+          {
+            "id": "act-3",
+            "user": "Ayşe",
+            "action": "entry 3",
+            "timestamp": 1788000003000,
+            "type": "default"
+          },
+          {
+            "id": "act-4",
+            "user": "Ayşe",
+            "action": "entry 4",
+            "timestamp": 1788000004000,
+            "type": "default"
+          },
+          {
+            "id": "act-5",
+            "user": "Ayşe",
+            "action": "entry 5",
+            "timestamp": 1788000005000,
+            "type": "default"
+          },
+          {
+            "id": "act-6",
+            "user": "Ayşe",
+            "action": "entry 6",
+            "timestamp": 1788000006000,
+            "type": "default"
+          },
+          {
+            "id": "act-7",
+            "user": "Ayşe",
+            "action": "entry 7",
+            "timestamp": 1788000007000,
+            "type": "default"
+          },
+          {
+            "id": "act-8",
+            "user": "Ayşe",
+            "action": "entry 8",
+            "timestamp": 1788000008000,
+            "type": "default"
+          },
+          {
+            "id": "act-9",
+            "user": "Ayşe",
+            "action": "entry 9",
+            "timestamp": 1788000009000,
+            "type": "default"
+          },
+          {
+            "id": "act-10",
+            "user": "Ayşe",
+            "action": "entry 10",
+            "timestamp": 1788000010000,
+            "type": "default"
+          },
+          {
+            "id": "act-11",
+            "user": "Ayşe",
+            "action": "entry 11",
+            "timestamp": 1788000011000,
+            "type": "default"
+          },
+          {
+            "id": "act-12",
+            "user": "Ayşe",
+            "action": "entry 12",
+            "timestamp": 1788000012000,
+            "type": "default"
+          },
+          {
+            "id": "act-13",
+            "user": "Ayşe",
+            "action": "entry 13",
+            "timestamp": 1788000013000,
+            "type": "default"
+          },
+          {
+            "id": "act-14",
+            "user": "Ayşe",
+            "action": "entry 14",
+            "timestamp": 1788000014000,
+            "type": "default"
+          },
+          {
+            "id": "act-15",
+            "user": "Ayşe",
+            "action": "entry 15",
+            "timestamp": 1788000015000,
+            "type": "default"
+          },
+          {
+            "id": "act-16",
+            "user": "Ayşe",
+            "action": "entry 16",
+            "timestamp": 1788000016000,
+            "type": "default"
+          },
+          {
+            "id": "act-17",
+            "user": "Ayşe",
+            "action": "entry 17",
+            "timestamp": 1788000017000,
+            "type": "default"
+          },
+          {
+            "id": "act-18",
+            "user": "Ayşe",
+            "action": "entry 18",
+            "timestamp": 1788000018000,
+            "type": "default"
+          },
+          {
+            "id": "act-19",
+            "user": "Ayşe",
+            "action": "entry 19",
+            "timestamp": 1788000019000,
+            "type": "default"
+          },
+          {
+            "id": "act-20",
+            "user": "Ayşe",
+            "action": "entry 20",
+            "timestamp": 1788000020000,
+            "type": "default"
+          },
+          {
+            "id": "act-21",
+            "user": "Ayşe",
+            "action": "entry 21",
+            "timestamp": 1788000021000,
+            "type": "default"
+          },
+          {
+            "id": "act-22",
+            "user": "Ayşe",
+            "action": "entry 22",
+            "timestamp": 1788000022000,
+            "type": "default"
+          },
+          {
+            "id": "act-23",
+            "user": "Ayşe",
+            "action": "entry 23",
+            "timestamp": 1788000023000,
+            "type": "default"
+          },
+          {
+            "id": "act-24",
+            "user": "Ayşe",
+            "action": "entry 24",
+            "timestamp": 1788000024000,
+            "type": "default"
+          },
+          {
+            "id": "act-25",
+            "user": "Ayşe",
+            "action": "entry 25",
+            "timestamp": 1788000025000,
+            "type": "default"
+          },
+          {
+            "id": "act-26",
+            "user": "Ayşe",
+            "action": "entry 26",
+            "timestamp": 1788000026000,
+            "type": "default"
+          },
+          {
+            "id": "act-27",
+            "user": "Ayşe",
+            "action": "entry 27",
+            "timestamp": 1788000027000,
+            "type": "default"
+          },
+          {
+            "id": "act-28",
+            "user": "Ayşe",
+            "action": "entry 28",
+            "timestamp": 1788000028000,
+            "type": "default"
+          },
+          {
+            "id": "act-29",
+            "user": "Ayşe",
+            "action": "entry 29",
+            "timestamp": 1788000029000,
+            "type": "default"
+          },
+          {
+            "id": "act-30",
+            "user": "Ayşe",
+            "action": "entry 30",
+            "timestamp": 1788000030000,
+            "type": "default"
+          },
+          {
+            "id": "act-31",
+            "user": "Ayşe",
+            "action": "entry 31",
+            "timestamp": 1788000031000,
+            "type": "default"
+          },
+          {
+            "id": "act-32",
+            "user": "Ayşe",
+            "action": "entry 32",
+            "timestamp": 1788000032000,
+            "type": "default"
+          },
+          {
+            "id": "act-33",
+            "user": "Ayşe",
+            "action": "entry 33",
+            "timestamp": 1788000033000,
+            "type": "default"
+          },
+          {
+            "id": "act-34",
+            "user": "Ayşe",
+            "action": "entry 34",
+            "timestamp": 1788000034000,
+            "type": "default"
+          },
+          {
+            "id": "act-35",
+            "user": "Ayşe",
+            "action": "entry 35",
+            "timestamp": 1788000035000,
+            "type": "default"
+          },
+          {
+            "id": "act-36",
+            "user": "Ayşe",
+            "action": "entry 36",
+            "timestamp": 1788000036000,
+            "type": "default"
+          },
+          {
+            "id": "act-37",
+            "user": "Ayşe",
+            "action": "entry 37",
+            "timestamp": 1788000037000,
+            "type": "default"
+          },
+          {
+            "id": "act-38",
+            "user": "Ayşe",
+            "action": "entry 38",
+            "timestamp": 1788000038000,
+            "type": "default"
+          },
+          {
+            "id": "act-39",
+            "user": "Ayşe",
+            "action": "entry 39",
+            "timestamp": 1788000039000,
+            "type": "default"
+          },
+          {
+            "id": "act-40",
+            "user": "Ayşe",
+            "action": "entry 40",
+            "timestamp": 1788000040000,
+            "type": "default"
+          },
+          {
+            "id": "act-41",
+            "user": "Ayşe",
+            "action": "entry 41",
+            "timestamp": 1788000041000,
+            "type": "default"
+          },
+          {
+            "id": "act-42",
+            "user": "Ayşe",
+            "action": "entry 42",
+            "timestamp": 1788000042000,
+            "type": "default"
+          },
+          {
+            "id": "act-43",
+            "user": "Ayşe",
+            "action": "entry 43",
+            "timestamp": 1788000043000,
+            "type": "default"
+          },
+          {
+            "id": "act-44",
+            "user": "Ayşe",
+            "action": "entry 44",
+            "timestamp": 1788000044000,
+            "type": "default"
+          },
+          {
+            "id": "act-45",
+            "user": "Ayşe",
+            "action": "entry 45",
+            "timestamp": 1788000045000,
+            "type": "default"
+          },
+          {
+            "id": "act-46",
+            "user": "Ayşe",
+            "action": "entry 46",
+            "timestamp": 1788000046000,
+            "type": "default"
+          },
+          {
+            "id": "act-47",
+            "user": "Ayşe",
+            "action": "entry 47",
+            "timestamp": 1788000047000,
+            "type": "default"
+          },
+          {
+            "id": "act-48",
+            "user": "Ayşe",
+            "action": "entry 48",
+            "timestamp": 1788000048000,
+            "type": "default"
+          },
+          {
+            "id": "act-49",
+            "user": "Ayşe",
+            "action": "entry 49",
+            "timestamp": 1788000049000,
+            "type": "default"
+          }
+        ]
+      }
+    }
+  ]
+}

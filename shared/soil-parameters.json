@@ -1,0 +1,152 @@
+{
+  "$comment": "The soil interpretation table, read by both halves of this application: TypeScript imports this file in src/lib/soil.ts, Rust embeds it in backend/crates/domain/src/soil.rs with include_str!. It lives here rather than in either of them because the screen and the assistant must not disagree about what counts as low — the answer 'Organic Matter 1.4 % (Low)' is rendered from this table on the server and from the same table in the dialog. The ten lines of banding logic are written on each side; the data is not. Bands follow the classification tables Turkish soil laboratories print on their reports: pH and salinity on the 1:2.5 saturation extract, phosphorus and potassium as kg/da of P2O5 and K2O, micronutrients as DTPA-extractable ppm. They are interpretation aids, not crop-specific recommendations. 'below' is an exclusive upper bound and the last band of every list omits it, catching everything above the one before.",
+  "parameters": [
+    {
+      "key": "ph",
+      "label": "pH",
+      "unit": "",
+      "hint": "1:2.5 in water",
+      "placeholder": "7.2",
+      "group": "macro",
+      "bands": [
+        { "below": 4.5, "level": "low", "label": "Strongly acidic" },
+        { "below": 5.5, "level": "low", "label": "Moderately acidic" },
+        { "below": 6.5, "level": "low", "label": "Slightly acidic" },
+        { "below": 7.5, "level": "optimal", "label": "Neutral" },
+        { "below": 8.5, "level": "high", "label": "Slightly alkaline" },
+        { "level": "high", "label": "Strongly alkaline" }
+      ]
+    },
+    {
+      "key": "ec",
+      "label": "Salinity (EC)",
+      "unit": "dS/m",
+      "placeholder": "0.8",
+      "group": "macro",
+      "bands": [
+        { "below": 4, "level": "optimal", "label": "Non-saline" },
+        { "below": 8, "level": "high", "label": "Slightly saline" },
+        { "below": 15, "level": "high", "label": "Moderately saline" },
+        { "level": "high", "label": "Highly saline" }
+      ]
+    },
+    {
+      "key": "lime",
+      "label": "Lime (CaCO₃)",
+      "unit": "%",
+      "placeholder": "4.5",
+      "group": "macro",
+      "bands": [
+        { "below": 1, "level": "optimal", "label": "Low lime" },
+        { "below": 5, "level": "optimal", "label": "Calcareous" },
+        { "below": 15, "level": "high", "label": "Moderately calcareous" },
+        { "below": 25, "level": "high", "label": "Highly calcareous" },
+        { "level": "high", "label": "Very highly calcareous" }
+      ]
+    },
+    {
+      "key": "organicMatter",
+      "label": "Organic Matter",
+      "unit": "%",
+      "placeholder": "2.1",
+      "group": "macro",
+      "bands": [
+        { "below": 1, "level": "low", "label": "Very low" },
+        { "below": 2, "level": "low", "label": "Low" },
+        { "below": 3, "level": "optimal", "label": "Medium" },
+        { "below": 4, "level": "optimal", "label": "Good" },
+        { "level": "high", "label": "High" }
+      ]
+    },
+    {
+      "key": "phosphorus",
+      "label": "Phosphorus (P₂O₅)",
+      "unit": "kg/da",
+      "placeholder": "7",
+      "group": "macro",
+      "bands": [
+        { "below": 3, "level": "low", "label": "Very low" },
+        { "below": 6, "level": "low", "label": "Low" },
+        { "below": 9, "level": "optimal", "label": "Medium" },
+        { "below": 12, "level": "optimal", "label": "High" },
+        { "level": "high", "label": "Very high" }
+      ]
+    },
+    {
+      "key": "potassium",
+      "label": "Potassium (K₂O)",
+      "unit": "kg/da",
+      "placeholder": "35",
+      "group": "macro",
+      "bands": [
+        { "below": 20, "level": "low", "label": "Very low" },
+        { "below": 30, "level": "low", "label": "Low" },
+        { "below": 40, "level": "optimal", "label": "Sufficient" },
+        { "below": 60, "level": "optimal", "label": "High" },
+        { "level": "high", "label": "Very high" }
+      ]
+    },
+    {
+      "key": "nitrogen",
+      "label": "Total Nitrogen",
+      "unit": "%",
+      "placeholder": "0.12",
+      "group": "macro",
+      "bands": [
+        { "below": 0.045, "level": "low", "label": "Very low" },
+        { "below": 0.09, "level": "low", "label": "Low" },
+        { "below": 0.17, "level": "optimal", "label": "Medium" },
+        { "below": 0.32, "level": "optimal", "label": "Good" },
+        { "level": "high", "label": "High" }
+      ]
+    },
+    {
+      "key": "iron",
+      "label": "Iron (Fe)",
+      "unit": "ppm",
+      "placeholder": "5.0",
+      "group": "micro",
+      "bands": [
+        { "below": 2.5, "level": "low", "label": "Deficient" },
+        { "below": 4.5, "level": "low", "label": "Marginal" },
+        { "level": "optimal", "label": "Sufficient" }
+      ]
+    },
+    {
+      "key": "zinc",
+      "label": "Zinc (Zn)",
+      "unit": "ppm",
+      "placeholder": "0.9",
+      "group": "micro",
+      "bands": [
+        { "below": 0.2, "level": "low", "label": "Very low" },
+        { "below": 0.7, "level": "low", "label": "Low" },
+        { "below": 2.4, "level": "optimal", "label": "Sufficient" },
+        { "level": "high", "label": "High" }
+      ]
+    },
+    {
+      "key": "manganese",
+      "label": "Manganese (Mn)",
+      "unit": "ppm",
+      "placeholder": "10",
+      "group": "micro",
+      "bands": [
+        { "below": 4, "level": "low", "label": "Deficient" },
+        { "below": 14, "level": "optimal", "label": "Sufficient" },
+        { "level": "high", "label": "High" }
+      ]
+    },
+    {
+      "key": "copper",
+      "label": "Copper (Cu)",
+      "unit": "ppm",
+      "placeholder": "1.2",
+      "group": "micro",
+      "bands": [
+        { "below": 0.2, "level": "low", "label": "Deficient" },
+        { "level": "optimal", "label": "Sufficient" }
+      ]
+    }
+  ]
+}

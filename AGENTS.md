@@ -49,13 +49,54 @@ before they are run. Do not add one back.
 
 Next.js 16 App Router with Turbopack, React 19, Tailwind CSS v4 and Leaflet
 (`react-leaflet` + `react-leaflet-draw`) for the map. Source lives in `src/`,
-the weather proxy route is `src/app/api/weather/route.ts` and needs
-`OPENWEATHER_API_KEY` in `.env.local`.
+and the weather proxy is `backend/crates/server/src/routes/weather.rs`, which
+needs `OPENWEATHER_API_KEY` in `.env.local` — it moved to the Rust service in
+slice 1 of the migration below.
 
 The key is read from the server environment only. The route deliberately does
 not accept a key from the request, and there is no settings field for one —
 that path used to put a secret in `localStorage` and in request URLs. Do not
 add it back.
+
+## The backend is moving to Rust, and `shared/` is the seam
+
+`backend/` is a Cargo workspace beside the Next application, and
+`RUST-BACKEND-PLAN.md` is the plan it is being built to — read the slice you
+are working in before touching it. Two crates exist so far:
+`crates/server` (Axum: `/api/health`, the weather proxy) and `crates/domain`
+(the types and sanitisers). `bun` still owns everything else.
+
+While the move is in progress, part of the application is defined twice: once
+in `src/lib` and once in `crates/domain`. Two definitions of one thing drift
+silently, so **a change to either half is a change to both**:
+
+- `shared/soil-parameters.json` holds the soil interpretation table. Both sides
+  read it — TypeScript imports it, Rust embeds it with `include_str!`. Do not
+  copy the bands or the labels into either language; that is the file that
+  makes "the answer and the screen cannot disagree about what counts as low"
+  true.
+- `shared/fixtures/` holds input-and-expected pairs. `bun run test` runs them
+  against `src/lib`, `cd backend && cargo test` runs the same files against the
+  domain crate. A fixture naming a function neither runner knows *fails*: a
+  fixture nobody runs reads like coverage without being any. When you find an
+  edge case, add the fixture first — both sides then fail until both sides
+  agree.
+- `crates/domain/src/js.rs` carries the JavaScript coercions the sanitisers
+  were specified in: UTF-16 string slicing, `Number(null) === 0`,
+  `parseFloat("20 m³")`, `Date.parse`, and the way `JSON.stringify` writes a
+  number. Port through it rather than substituting Rust's rules — a sanitiser
+  written with Rust's semantics agrees on today's records and disagrees on the
+  next hand-edited file.
+- `crates/domain/src/password.rs` writes `scrypt$<salt>$<hash>` with Node's
+  default parameters (N=16384, r=8, p=1, 16-byte salt, 64-byte key). Those
+  numbers are why every existing password keeps working, and
+  `shared/fixtures/scrypt.json` cross-verifies hashes written by each side.
+  Every call belongs in `spawn_blocking`.
+
+The domain crate has no I/O and draws nothing: no `node:fs` equivalent, no
+badge classes, no formatting for the screen. It is the Rust half of what is
+isomorphic today, and it is written to be checked against the other half rather
+than trusted.
 
 ## Field data lives on the server
 

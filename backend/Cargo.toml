@@ -1,8 +1,14 @@
 [workspace]
 resolver = "3"
-members = ["crates/server"]
+members = ["crates/domain", "crates/server"]
 
 [workspace.package]
 edition = "2024"
 license = "MIT"
 publish = false
+
+# `scrypt` is deliberately expensive, and an unoptimised build of it turns the
+# password fixtures from a second into half a minute. Only the dependencies are
+# optimised; this workspace's own crates keep their debug build.
+[profile.dev.package."*"]
+opt-level = 2
