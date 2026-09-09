@@ -11,6 +11,12 @@ is the package manager, script runner and runtime for this project.
 curl -fsSL https://bun.sh/install | bash
 ```
 
+A Rust toolchain, for the API service that part of the backend has moved to:
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
 ## 🛠️ Development Setup
 
 ```bash
@@ -38,13 +44,38 @@ them unset and the app says the assistant is not set up on this server. Like the
 weather key, all three are read on the server and there is no in-app field for
 them.
 
-Start the development server:
+### The API service
+
+Part of the backend is being rewritten in Rust and runs as a second process
+(see `RUST-BACKEND-PLAN.md` for what has moved and what has not). It needs a
+Rust toolchain — [rustup](https://rustup.rs) — and it is built with Cargo:
+
+```bash
+cd backend
+cargo build --release
+```
+
+It listens on `127.0.0.1:8080` by default; `FIELDMANAGER_BIND` changes that.
+Next.js reaches it through the `rewrites` in `next.config.ts`, so the browser
+still talks to a single origin and the port you open is Next's, not this one.
+`FIELDMANAGER_API_ORIGIN` points Next somewhere else if you move it.
+
+Right now it serves only `/api/health`; every other route is still handled by
+Next. Start it before the dev server:
+
+```bash
+./backend/target/release/fieldmanager-api
+```
+
+### Both together
 
 ```bash
 bun run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000) in your browser, and
+`http://localhost:3000/api/health` should answer `{"status":"ok",...}` — that
+is the request going through Next to the Rust service and back.
 
 Other commands:
 
@@ -176,6 +207,17 @@ network in the clear no matter how it is stored. The session cookie is marked
 `Secure` automatically when the request arrives over https (directly or through a
 proxy that sets `X-Forwarded-Proto`).
 
+**A note on the rate limits.** Sign-in attempts, writes and assistant questions
+are throttled per client address, read from `X-Forwarded-For` or `X-Real-IP`.
+Nothing on this machine sets those headers: Next.js forwards them to the API
+service if they arrive, but does not add them. So on a plain install with no
+proxy in front, every caller counts as one — the throttles still work, but they
+apply to the installation as a whole rather than per client, and a caller that
+sends the header itself chooses its own bucket. That is a trusted-network
+posture, not a defence; if the app is reached over https or from outside the
+machine, put a reverse proxy in front, have it set `X-Forwarded-For` and
+`X-Forwarded-Proto`, and point `/api/*` at the API service directly.
+
 Binding to the loopback interface and reaching it over an SSH tunnel or a VPN
 remains the simplest safe setup. Pass the host to `next start`; it listens on
 every interface otherwise, and the `HOSTNAME` environment variable is ignored:
@@ -242,6 +284,53 @@ If a firewall is enabled, allow the port:
 
 ```bash
 sudo ufw allow 3000/tcp
+```
+
+### The API service under systemd
+
+The Rust service gets its own unit. It listens on loopback and is reached only
+through Next's rewrites, so it needs no firewall rule of its own — the port you
+opened above is still the only one exposed.
+
+```ini
+# /etc/systemd/system/fieldmanager-api.service
+[Unit]
+Description=Field Manager API (Rust/Axum)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=USER
+ExecStart=/path/to/fieldmanager/backend/target/release/fieldmanager-api
+Restart=on-failure
+RestartSec=5
+Environment=FIELDMANAGER_BIND=127.0.0.1:8080
+Environment=FIELDMANAGER_DATA_DIR=/var/lib/fieldmanager
+# Hardening: the service needs its data directory and nothing else.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/fieldmanager
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then tie the web unit to it, so Next never starts before the API it proxies to.
+In `fieldmanager.service`, add to the `[Unit]` section:
+
+```ini
+After=network-online.target fieldmanager-api.service
+Wants=network-online.target fieldmanager-api.service
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now fieldmanager-api
+sudo systemctl restart fieldmanager
+curl -s localhost:3000/api/health      # {"status":"ok","version":"..."}
 ```
 
 ## Development Philosophy

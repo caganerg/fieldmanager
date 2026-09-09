@@ -52,6 +52,21 @@ const securityHeaders = [
   },
 ];
 
+// Where the Rust API service listens. It is reached only through the rewrites
+// below, so the browser still talks to a single origin: no CORS, and the
+// session cookie stays where it was set. Loopback by default — the port a
+// browser reaches is this one, not the API's.
+const apiOrigin = process.env.FIELDMANAGER_API_ORIGIN || "http://127.0.0.1:8080";
+
+// Paths served by the Rust service rather than by a route handler in
+// `src/app/api`. This list grows one slice at a time (see
+// RUST-BACKEND-PLAN.md); a path that is not named here is still TypeScript's.
+//
+// `/api/_echo` is temporary: it measures what this proxy passes through, and
+// it goes away with slice 0. It only answers when the API service is started
+// with FIELDMANAGER_ECHO=1.
+const rustApiPaths = ["/api/health", "/api/_echo"];
+
 const nextConfig: NextConfig = {
   // The about dialog shows the version, and package.json is where it is
   // actually set. Inlining it at build time keeps the number in one place
@@ -61,6 +76,12 @@ const nextConfig: NextConfig = {
   },
   reactCompiler: true,
   devIndicators: false,
+  async rewrites() {
+    return rustApiPaths.map((path) => ({
+      source: path,
+      destination: `${apiOrigin}${path}`,
+    }));
+  },
   async headers() {
     return [
       {
